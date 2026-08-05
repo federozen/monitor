@@ -1,0 +1,15 @@
+{
+  "now": "2026-08-04T12:00:00-03:00",
+  "sources": [
+    {"source_id": "afa", "status": "ok"},
+    {"source_id": "ole", "status": "ok"},
+    {"source_id": "medio_caido", "status": "error"}
+  ],
+  "articles": [
+    {"article_id": "a1", "title": "River confirmó una baja para el partido", "url": "https://river.example/baja", "publisher": "River Oficial", "date_published": "2026-08-04T10:00:00-03:00", "date_origin": "jsonld"},
+    {"article_id": "a2", "title": "River tendrá una baja ante su rival", "url": "https://tyc.example/baja", "publisher": "TyC Sports", "date_published": "2026-08-04T10:30:00-03:00", "date_origin": "rss"},
+    {"article_id": "old", "title": "La final del Mundial y sus grandes recuerdos", "url": "https://example.com/old", "publisher": "Google News", "date_published": "2026-08-04T11:50:00-03:00", "date_origin": "discovery_timestamp"}
+  ],
+  "ole_titles": ["River: una baja sensible para el próximo partido"]
+}
+

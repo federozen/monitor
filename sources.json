@@ -1,0 +1,18 @@
+{
+  "_comentario": "Editá esta lista sin tocar código. 'ole' se usa SOLO para comparar cobertura (títulos). 'feeds' son las fuentes propias. date_origin: 'rss'/'datePublished' = fecha confiable directa; 'discovery_timestamp' = fecha de agregador. Poné 'enrich': true en una fuente de agregador (Google News) para que el monitor siga cada link y lea la fecha REAL de la nota (JSON-LD/OpenGraph): así pasa de 'para_verificar' a 'confirmada' y entra al resumen.",
+
+  "ole": {
+    "source_id": "ole",
+    "publisher": "Olé",
+    "url": "https://news.google.com/rss/search?q=site:ole.com.ar&hl=es-419&gl=AR&ceid=AR:es-419"
+  },
+
+  "feeds": [
+    {"source_id": "tyc", "publisher": "TyC Sports", "url": "https://news.google.com/rss/search?q=site:tycsports.com%20futbol&hl=es-419&gl=AR&ceid=AR:es-419", "date_origin": "discovery_timestamp", "enrich": true},
+    {"source_id": "espn_ar", "publisher": "ESPN Argentina", "url": "https://news.google.com/rss/search?q=site:espn.com.ar%20futbol&hl=es-419&gl=AR&ceid=AR:es-419", "date_origin": "discovery_timestamp", "enrich": true},
+    {"source_id": "infobae", "publisher": "Infobae", "url": "https://news.google.com/rss/search?q=site:infobae.com%20deportes&hl=es-419&gl=AR&ceid=AR:es-419", "date_origin": "discovery_timestamp", "enrich": true},
+
+    {"source_id": "guardian_football", "publisher": "The Guardian", "url": "https://www.theguardian.com/football/rss", "date_origin": "rss"},
+    {"source_id": "bbc_football", "publisher": "BBC Sport", "url": "https://feeds.bbci.co.uk/sport/football/rss.xml", "date_origin": "rss"}
+  ]
+}
