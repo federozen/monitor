@@ -624,8 +624,8 @@ def fetch_ultimas_ole() -> list:
     global _OLE_FETCH_META
     now = datetime.now(_OLE_TZ)
     start_today = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    max_pages = max(2, int(os.environ.get("OLE_MAX_PAGES", "12") or 12))
-    detail_limit = max(0, int(os.environ.get("OLE_DETAIL_DATE_LIMIT", "55") or 55))
+    max_pages = max(12, int(os.environ.get("OLE_MAX_PAGES", "12") or 12))
+    detail_limit = max(55, int(os.environ.get("OLE_DETAIL_DATE_LIMIT", "55") or 55))
     all_items: list[dict] = []
     seen: set[str] = set()
     pages_done = 0

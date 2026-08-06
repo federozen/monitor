@@ -191,9 +191,15 @@ def _ole_status(rec: dict | None, row: dict) -> tuple[str, str, str]:
 
 def _action(rec: dict | None, row: dict) -> str:
     action = str((rec or {}).get("action") or (rec or {}).get("Accion") or row.get("accion") or row.get("Accion") or "INFORMARSE").upper()
-    if action == "OBSERVAR":
-        return "INFORMARSE"
-    return action
+    aliases = {
+        "SUBIR YA": "PUBLICAR AHORA",
+        "REDACTAR": "PUBLICAR AHORA",
+        "RETOMAR": "ACTUALIZAR",
+        "EXPLOTA": "ACTUALIZAR",
+        "EMPUJAR": "SEGUIR",
+        "OBSERVAR": "INFORMARSE",
+    }
+    return aliases.get(action, action)
 
 
 def _priority(rec: dict | None, row: dict, fallback: int = 30) -> int:
@@ -456,10 +462,12 @@ def build_editorial_desk(themes: list[dict], changes: list[dict], recommendation
         item["window_start"] = start.isoformat(timespec="minutes")
         item["window_end"] = end.isoformat(timespec="minutes")
         item["generated_at"] = now.isoformat(timespec="seconds")
-        if idx <= 10:
-            item["importance"] = "IMPRESCINDIBLE"
-        elif item["section"] == "HALLAZGOS":
+        if item["section"] == "HALLAZGOS":
             item["importance"] = "HALLAZGO"
+        elif item["action"] in {"PUBLICAR AHORA", "ACTUALIZAR"} and _int(item.get("priority")) >= 70:
+            item["importance"] = "IMPRESCINDIBLE"
+        elif item["action"] in {"VERIFICAR", "PROFUNDIZAR", "SEGUIR"}:
+            item["importance"] = "PARA ACTUAR"
         else:
             item["importance"] = "PANORAMA"
 

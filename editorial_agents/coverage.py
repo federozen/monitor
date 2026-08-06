@@ -17,6 +17,7 @@ STATUS_WORDS = {
 
 GENERIC_WORDS = {
     "partido", "equipo", "futbol", "club", "jugador", "tecnico", "liga",
+    "resultado", "resultados", "marcador", "cronica",
     "copa", "torneo", "fecha", "hoy", "manana", "ultimo", "ultima", "nueva", "nuevo",
     "tras", "ante", "para", "con", "sin", "sobre", "desde", "vivo", "hora",
     "como", "ver", "juega", "jugar", "online", "minuto", "formaciones",
@@ -72,7 +73,10 @@ def normalize_coverage_status(value: str) -> str:
 
 
 def _tokens(title: str) -> set[str]:
-    return {token for token in normalize_text(title).split() if len(token) >= 3}
+    return {
+        token for token in normalize_text(title).split()
+        if len(token) >= 3 and not token.isdigit()
+    }
 
 
 def _distinctive(title: str) -> set[str]:
@@ -156,7 +160,7 @@ def normalize_ole_items(items: list[dict] | None) -> list[dict]:
         seen.add(key)
         out.append({
             "title": title,
-            "url": str(item.get("url") or ""),
+            "url": str(item.get("url_final") or item.get("URLFinal") or item.get("url") or ""),
             "published_at": str(item.get("fecha_publicacion") or item.get("fecha") or ""),
             "summary": str(item.get("bajada") or item.get("summary") or ""),
         })
@@ -201,12 +205,20 @@ def _new_detail_tokens(external_titles: list[str], ole_title: str) -> list[str]:
     candidates: list[str] = []
     for title in external_titles:
         for token in _distinctive(title) - ole:
-            if token in STATUS_WORDS or token.isdigit():
+            if token in STATUS_WORDS:
                 candidates.append(token)
+            elif token.isdigit():
+                number = int(token)
+                # Marcadores 0/1/2 y años no son, por sí solos, un dato nuevo
+                # suficiente para pedir una actualización.
+                if number > 2 and not (1900 <= number <= 2100):
+                    candidates.append(token)
     return unique_strings(candidates)[:8]
 
 
-def _direct_ole_evidence(theme: dict) -> bool:
+def _direct_ole_items(theme: dict) -> list[dict]:
+    out: list[dict] = []
+    seen: set[str] = set()
     for item in theme.get("noticias", []) or []:
         news = item.get("noticia", {}) if isinstance(item, dict) else {}
         source = item.get("fuente", {}) if isinstance(item, dict) else {}
@@ -215,8 +227,22 @@ def _direct_ole_evidence(theme: dict) -> bool:
             f"{source.get('id', '')} {source.get('nombre', '')}"
         )
         if identity == "ole" or " ole " in f" {identity} ":
-            return True
-    return False
+            title = str(news.get("titulo") or news.get("title") or "").strip()
+            url = str(news.get("url_final") or news.get("URLFinal") or news.get("url") or "").strip()
+            key = url or normalize_text(title)
+            if title and key not in seen:
+                seen.add(key)
+                out.append({
+                    "title": title,
+                    "url": url,
+                    "published_at": str(news.get("fecha_publicacion_verificada") or news.get("fecha_publicacion") or ""),
+                    "updated_at": str(news.get("fecha_actualizacion") or ""),
+                })
+    return out
+
+
+def _direct_ole_evidence(theme: dict) -> bool:
+    return bool(_direct_ole_items(theme))
 
 
 def enrich_theme_coverage(theme: dict, ole_items: list[dict]) -> dict:
@@ -229,15 +255,38 @@ def enrich_theme_coverage(theme: dict, ole_items: list[dict]) -> dict:
     representative = str(theme.get("titulo") or "")
     matches = [best_ole_match(title, ole_items) for title in [representative, *source_titles] if title]
     match = max(matches, key=lambda item: float(item.get("score", 0) or 0), default={"score": 0.0, "valid": False})
+    direct_items = _direct_ole_items(theme)
+    direct = bool(direct_items)
+    if direct_items:
+        # La evidencia contenida en el propio cluster tiene prioridad absoluta
+        # sobre un matching aproximado contra el inventario de Olé. Evita tanto
+        # falsos NO_CUBIERTO como enlaces a una nota ajena.
+        direct_matches = []
+        for item in direct_items:
+            details = _similarity_details(representative, item.get("title", ""))
+            direct_matches.append({
+                "score": max(0.72, float(details.get("score", 0) or 0)),
+                "title": item.get("title", ""),
+                "url": item.get("url", ""),
+                "shared": details.get("shared_tokens", []),
+                "valid": True,
+                "shared_entities": details.get("shared_entities", []),
+                "shared_events": details.get("shared_events", []),
+            })
+        match = max(direct_matches, key=lambda item: float(item.get("score", 0) or 0))
     score = float(match.get("score", 0) or 0)
-    direct = _direct_ole_evidence(theme)
     valid = bool(match.get("valid")) or direct
-    new_details = _new_detail_tokens(source_titles or [representative], str(match.get("title") or "")) if valid else []
+    non_ole_titles = []
+    direct_titles = {normalize_text(item.get("title", "")) for item in direct_items}
+    for title in source_titles or [representative]:
+        if normalize_text(title) not in direct_titles:
+            non_ole_titles.append(title)
+    new_details = _new_detail_tokens(non_ole_titles, str(match.get("title") or "")) if valid else []
 
-    if direct and not match.get("title"):
-        # El cluster contiene una nota de Olé pero el inventario cronológico pudo
-        # no traerla todavía. Se reconoce la cobertura sin inventar un enlace.
-        status = "CUBIERTO_CON_DATO_NUEVO" if new_details else "YA_CUBIERTO"
+    if direct and new_details:
+        status = "CUBIERTO_CON_DATO_NUEVO"
+    elif direct:
+        status = "YA_CUBIERTO"
     elif valid and score >= 0.72 and new_details:
         status = "CUBIERTO_CON_DATO_NUEVO"
     elif valid and score >= 0.72:

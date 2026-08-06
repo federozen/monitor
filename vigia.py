@@ -23,6 +23,7 @@ import online_storage as online
 from editorial_agents import orchestrator as agent_orchestrator
 from editorial_agents import cut_quality
 from editorial_agents.date_enrichment import enrich_results_dates, enrich_cluster_dates
+from editorial_agents.story_merge import consolidate_stories
 
 
 def clave_tema(titulo: str) -> str:
@@ -196,7 +197,11 @@ def main():
     )
 
     print("\n2) Tendencias y momentum...")
-    tendencias = calcular_tendencias(resultados)
+    tendencias_iniciales = calcular_tendencias(resultados)
+    tendencias = consolidate_stories(tendencias_iniciales)
+    fusionadas = len(tendencias_iniciales) - len(tendencias)
+    if fusionadas:
+        print(f"   historias vivas: {len(tendencias_iniciales)} clusters técnicos → {len(tendencias)} historias ({fusionadas} fusionados)")
     print("\n2b) Repartiendo verificación de fechas entre historias...")
     cluster_date_stats = enrich_cluster_dates(tendencias)
     print(
@@ -240,7 +245,12 @@ def main():
         # OLE_HOY usa solo el flujo cronologico y el respaldo fechado. La
         # portada y la memoria de cinco dias siguen sirviendo para comparar
         # cobertura, pero no deben contaminar la vista "hoy".
-        ole_today_items = ultimas + gnews_ole
+        # Las notas directas de Olé recolectadas en portada/RSS ya fueron
+        # enriquecidas con metadata. Se suman a OLE_HOY para no perder las
+        # publicaciones más recientes cuando la paginación de Últimas queda
+        # incompleta o desactualizada. build_ole_today filtra estrictamente por
+        # fecha del día y deduplica por URL/título.
+        ole_today_items = portada + ultimas + gnews_ole
         print(f"   cobertura Olé: portada {len(portada)} · últimas {len(ultimas)} · gnews {len(gnews_ole)} · "
               f"páginas {ole_fetch_meta.get('pages', 0)} · estado {ole_fetch_meta.get('status', '')}")
         if legacy_memory:
@@ -352,6 +362,9 @@ def main():
                     "telegram_mode": os.environ.get("TELEGRAM_MODE", "full"),
                     "noticias_corte": total,
                     "temas_corte": len(tendencias),
+                    "clusters_tecnicos": len(tendencias_iniciales),
+                    "historias_vivas": len(tendencias),
+                    "clusters_fusionados": fusionadas,
                     "ole_cobertura_dia": ole_fetch_meta.get("status", ""),
                     "ole_paginas_revisadas": ole_fetch_meta.get("pages", 0),
                     "ole_notas_listado": ole_fetch_meta.get("items", len(ultimas)),

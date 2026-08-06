@@ -21,6 +21,34 @@ URGENT_HINTS = {
     "murio", "fallecio", "renuncio", "despedido", "sancion", "fallo", "resultado",
 }
 
+ARGENTINA_INTEREST_HINTS = {
+    "argentina", "argentino", "argentina", "seleccion", "messi", "scaloni",
+    "di maria", "dibu", "julian alvarez", "lisandro martinez", "cuti romero",
+    "colapinto", "tirante", "baez", "cerundolo", "boca", "river", "racing",
+    "independiente", "san lorenzo", "estudiantes", "tigre", "belgrano",
+    "liga profesional", "torneo clausura", "copa argentina", "afa",
+}
+
+GLOBAL_IMPACT_HINTS = {
+    "mundial", "champions", "final", "campeon", "campeona", "record", "historico",
+    "ascenso", "descenso", "fallecio", "murio", "sancion", "suspendido",
+    "desmentido", "oficial", "fifa", "conmebol", "uefa",
+}
+
+
+def _argentina_interest(title: str, theme: dict) -> bool:
+    text = normalize_text(title)
+    if any(hint in text for hint in ARGENTINA_INTEREST_HINTS):
+        return True
+    national = int(theme.get("nac") or theme.get("Nacional") or 0)
+    international = int(theme.get("intl") or theme.get("Internacional") or 0)
+    return national >= 2 or national >= international
+
+
+def _global_impact(title: str) -> bool:
+    text = normalize_text(title)
+    return any(hint in text for hint in GLOBAL_IMPACT_HINTS)
+
 
 def _source_details(theme: dict) -> list[dict]:
     details: list[dict] = []
@@ -103,7 +131,7 @@ def _freshness(details: list[dict], max_age_hours: int) -> dict:
     }
 
 
-def _action(theme: dict, agenda_item: dict, official_count: int, rumor: bool, freshness: dict) -> str:
+def _action(theme: dict, agenda_item: dict, official_count: int, rumor: bool, freshness: dict, local_interest: bool, global_impact: bool) -> str:
     coverage = normalize_coverage_status(str(theme.get("coverage_status") or ("YA_CUBIERTO" if theme.get("tiene_ole") else "NO_CUBIERTO")))
     media = int(theme.get("cant_medios") or 0)
     delta = int(agenda_item.get("delta") or 0)
@@ -124,8 +152,15 @@ def _action(theme: dict, agenda_item: dict, official_count: int, rumor: bool, fr
         return "VERIFICAR"
     if rumor and official_count == 0:
         return "VERIFICAR"
-    if coverage == "NO_CUBIERTO" and (official_count > 0 or media >= 2):
+    if coverage == "NO_CUBIERTO" and local_interest and (official_count > 0 or media >= 2):
         return "PUBLICAR AHORA"
+    if coverage == "NO_CUBIERTO" and global_impact and (official_count > 0 or media >= 3):
+        return "PROFUNDIZAR"
+    if coverage == "NO_CUBIERTO" and not local_interest:
+        # El radar operativo no transforma cualquier repetición internacional
+        # en una orden de publicación. Esos temas se evalúan en HALLAZGOS, donde
+        # rareza, confianza y conexión argentina están separadas.
+        return "OBSERVAR"
     if coverage == "NO_CUBIERTO" and changed:
         return "VERIFICAR"
     return "OBSERVAR"
@@ -154,7 +189,9 @@ def curate(themes: list[dict], agenda: list[dict], config: dict | None = None) -
         is_new = bool(agenda_item.get("nuevo"))
         fresh = _freshness(details, max_age_hours)
         coverage = normalize_coverage_status(str(theme.get("coverage_status") or ("YA_CUBIERTO" if theme.get("tiene_ole") else "NO_CUBIERTO")))
-        action = _action(theme, agenda_item, len(official), rumor, fresh)
+        local_interest = _argentina_interest(title, theme)
+        global_impact = _global_impact(title)
+        action = _action(theme, agenda_item, len(official), rumor, fresh, local_interest, global_impact)
 
         confidence = 28 + min(media, 5) * 9 + (18 if official else 0)
         confidence += 8 if fresh["has_dates"] else -18
@@ -171,6 +208,8 @@ def curate(themes: list[dict], agenda: list[dict], config: dict | None = None) -
         priority += 5 if is_new else 0
         if action == "OBSERVAR":
             priority = min(priority, 49)
+        if not local_interest and not global_impact:
+            priority = min(priority, 42)
         if not fresh["has_dates"]:
             priority = min(priority, 45)
         elif not fresh["is_recent"]:
@@ -201,6 +240,8 @@ def curate(themes: list[dict], agenda: list[dict], config: dict | None = None) -
             reasons.append("sin fecha verificable")
         if rumor and not official:
             reasons.append("conserva lenguaje de version o negociacion")
+        if not local_interest and not global_impact:
+            reasons.append("sin conexion argentina ni consecuencia global suficiente para una accion operativa")
 
         if not fresh["has_dates"]:
             state = "FECHA NO VERIFICADA"

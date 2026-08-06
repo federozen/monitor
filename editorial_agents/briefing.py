@@ -48,7 +48,16 @@ def _momentum(row: dict) -> int:
 
 
 def _action(row: dict) -> str:
-    return str(row.get("action") or row.get("Accion") or row.get("accion") or "OBSERVAR").upper()
+    raw = str(row.get("action") or row.get("Accion") or row.get("accion") or "OBSERVAR").upper()
+    aliases = {
+        "SUBIR YA": "PUBLICAR AHORA",
+        "REDACTAR": "PUBLICAR AHORA",
+        "RETOMAR": "ACTUALIZAR",
+        "EXPLOTA": "ACTUALIZAR",
+        "EMPUJAR": "SEGUIR",
+        "OBSERVAR": "OBSERVAR",
+    }
+    return aliases.get(raw, raw)
 
 
 def _source_titles(row: dict) -> list[str]:
@@ -127,8 +136,18 @@ def _fact_markers(titles: list[str]) -> set[str]:
         for group, terms in _FACT_GROUPS.items():
             if words & terms:
                 markers.add(group)
+        # Los números aislados de un marcador (0, 1, 2) o el año de la
+        # competencia no constituyen por sí mismos un cambio editorial. Los
+        # grupos RESULTADO, CIFRA y PLAZO ya capturan el sentido relevante.
         for match in re.findall(r"\b\d+(?:[.,]\d+)?\b", text):
-            markers.add(f"NUMERO:{match.replace(',', '.')}")
+            normalized_number = match.replace(',', '.')
+            try:
+                numeric = float(normalized_number)
+            except ValueError:
+                continue
+            if numeric <= 2 or 1900 <= numeric <= 2100:
+                continue
+            markers.add(f"NUMERO:{normalized_number}")
         for hh, mm in re.findall(r"\b([0-2]?\d)[:.]([0-5]\d)\b", text):
             markers.add(f"HORA:{int(hh):02d}:{mm}")
     return markers

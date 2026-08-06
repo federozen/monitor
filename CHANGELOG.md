@@ -1,3 +1,19 @@
+## 12.1.4 - 2026-08-05
+
+- Agrega una segunda pasada de consolidación para convertir clusters técnicos duplicados en historias vivas.
+- Fusiona con criterio conservador distintos ángulos del mismo partido o hecho y evita encadenamientos entre historias diferentes.
+- Prioriza la evidencia directa de Olé contenida en el cluster sobre coincidencias aproximadas del inventario.
+- Elimina falsos enlaces de cobertura producidos por expresiones genéricas como “resultados en vivo” y años compartidos.
+- Separa el radar operativo de los hallazgos: una historia internacional rutinaria sin conexión argentina deja de generar `PUBLICAR AHORA`.
+- Conserva como accionables las historias argentinas o globales con consecuencia suficiente.
+- Normaliza acciones heredadas (`SUBIR YA`, `REDACTAR`, `RETOMAR`) antes de mostrarlas al editor.
+- Deja de presentar los números 0 y 1 de un marcador como “dato numérico nuevo”.
+- Clasifica como `IMPRESCINDIBLE` solo acciones firmes con prioridad editorial, no las primeras diez filas por posición.
+- Suma las notas directas de Olé a `OLE_HOY` para recuperar publicaciones recientes que la paginación de Últimas pudiera omitir.
+- Fuerza un recorrido mínimo de 12 páginas y 55 consultas de fecha en Olé.
+- Agrega métricas de `clusters_tecnicos`, `historias_vivas` y `clusters_fusionados` a Control.
+- Agrega siete pruebas de regresión; la suite completa alcanza 77 pruebas.
+
 ## 12.1.2 - 2026-08-05
 
 - Agrega enriquecimiento acotado de fechas: abre solamente artículos directos priorizados y extrae `datePublished` / `dateModified` desde JSON-LD, metadatos y etiquetas `time`.
