@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from typing import Any
 
-from .utils import (explicit_date_in_text, normalize_text, now_ar, parse_datetime,
+from .utils import (canonical_cluster_id, explicit_date_in_text, normalize_text, now_ar, parse_datetime,
                     stable_id, unique_strings)
 
 _ACTIONABLE = {"PUBLICAR AHORA", "ACTUALIZAR", "VERIFICAR", "PROFUNDIZAR", "SEGUIR"}
@@ -37,7 +37,7 @@ def _url(row: dict) -> str:
 
 
 def _cluster(row: dict) -> str:
-    return str(row.get("cluster_id") or row.get("ClusterID") or stable_id(normalize_text(_title(row)), "c"))
+    return str(row.get("cluster_id") or row.get("ClusterID") or canonical_cluster_id(_title(row)))
 
 
 def _cut_window(now: datetime) -> tuple[datetime, datetime, str]:
@@ -265,6 +265,7 @@ def build_editorial_desk(themes: list[dict], changes: list[dict], recommendation
     theme_map = {_cluster(theme): theme for theme in themes or []}
     selected: list[dict] = []
     audit: list[dict] = []
+    visible_findings: list[dict] = []
 
     eligible_theme_ids: set[str] = set()
     exclusion_reasons: dict[str, str] = {}
@@ -326,6 +327,30 @@ def build_editorial_desk(themes: list[dict], changes: list[dict], recommendation
         finding_status = str(discovery.get("status") or discovery.get("Estado") or "CANDIDATO PARA EXPLORAR").upper()
         fresh = _discovery_in_cut(discovery, start, now)
         firm = finding_status in {"HALLAZGO FUERTE", "HALLAZGO"}
+        # HALLAZGOS es una bandeja editorial viva, no solo una copia del
+        # resumen de bloque. Conserva los hallazgos firmes del radar actual
+        # aunque hayan aparecido antes del inicio exacto del bloque 4H.
+        if firm:
+            evidence = discovery.get("evidence") or discovery.get("Evidencia") or []
+            sources, source_urls = _source_line(evidence if isinstance(evidence, list) else [])
+            visible_findings.append({
+                "cut_key": cut_key,
+                "finding_status": finding_status,
+                "priority": _int(discovery.get("score") or discovery.get("Score") or 50),
+                "noticiability": _int(discovery.get("noticiability") or discovery.get("Noticiabilidad") or discovery.get("score") or discovery.get("Score") or 0),
+                "confidence": _int(discovery.get("confidence") or discovery.get("Confianza") or 0),
+                "signals": discovery.get("signals") or discovery.get("Senales") or [],
+                "confidence_reason": str(discovery.get("confidence_reason") or discovery.get("MotivoConfianza") or ""),
+                "topic": title,
+                "what_happened": str(discovery.get("reason") or discovery.get("Motivo") or title),
+                "why_it_matters": str(discovery.get("why_it_matters") or discovery.get("PorQueImporta") or ""),
+                "ole_status": str(discovery.get("ole_status") or discovery.get("EstadoOle") or "NO_CUBIERTO"),
+                "action": "PROFUNDIZAR" if finding_status == "HALLAZGO FUERTE" else "SEGUIR",
+                "suggested_format": str(discovery.get("suggested_format") or discovery.get("Formato") or "NOTA BREVE"),
+                "sources": sources or str(discovery.get("Publishers") or " | ".join(discovery.get("publishers", []) or [])),
+                "source_urls": source_urls,
+                "url": _url(discovery),
+            })
         audit.append({
             "cut_key": cut_key, "item_type": "HALLAZGO",
             "item_id": str(discovery.get("discovery_id") or discovery.get("DiscoveryID") or stable_id(title, "d")),
@@ -455,7 +480,7 @@ def build_editorial_desk(themes: list[dict], changes: list[dict], recommendation
         "generated_at": now.isoformat(timespec="seconds"),
         "topic_count": len(selected),
         "action_count": len(actions),
-        "finding_count": sum(1 for item in selected if item["section"] == "HALLAZGOS"),
+        "finding_count": len(visible_findings),
         "social_count": sum(1 for item in selected if item["section"] == "BUZON SOCIAL"),
         "broken_source_count": len(broken),
         "minimum_target": min_topics,
@@ -470,4 +495,4 @@ def build_editorial_desk(themes: list[dict], changes: list[dict], recommendation
             if "VERIFIC" in reason or "DESCUBRIMIENTO" in reason
         ),
     }
-    return {"topics": selected, "actions": actions, "audit": audit, "meta": meta}
+    return {"topics": selected, "actions": actions, "findings": visible_findings, "audit": audit, "meta": meta}

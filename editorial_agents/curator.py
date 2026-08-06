@@ -4,7 +4,7 @@ import os
 from datetime import datetime, timezone
 
 from .coverage import normalize_coverage_status
-from .utils import clamp, normalize_text, stable_id, unique_strings
+from .utils import canonical_cluster_id, clamp, normalize_text, stable_id, unique_strings
 
 OFFICIAL_HINTS = {
     "oficial", "afa", "fifa", "conmebol", "liga profesional", "seleccion argentina",
@@ -45,7 +45,7 @@ def _is_official(detail: dict) -> bool:
 def _agenda_lookup(agenda: list[dict]) -> dict[str, dict]:
     out: dict[str, dict] = {}
     for item in agenda or []:
-        key = stable_id(" ".join(sorted(normalize_text(item.get("titulo", "")).split())), "c")
+        key = canonical_cluster_id(item.get("titulo", ""))
         out[key] = item
     return out
 
@@ -116,7 +116,7 @@ def curate(themes: list[dict], agenda: list[dict], config: dict | None = None) -
         title = str(theme.get("titulo") or "").strip()
         if not title:
             continue
-        cluster_key = stable_id(" ".join(sorted(normalize_text(title).split())), "c")
+        cluster_key = canonical_cluster_id(title)
         agenda_item = lookup.get(cluster_key, {})
         details = _source_details(theme)
         publishers = unique_strings([d["publisher"] for d in details])

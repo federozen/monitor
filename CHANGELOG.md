@@ -1,3 +1,10 @@
+## 12.1.1 - 2026-08-05
+
+- Unifica el identificador de historia entre Temas, Recomendaciones, Cambios y la mesa editorial.
+- Corrige ACCIONES vacía cuando existían recomendaciones firmes en la misma historia.
+- HALLAZGOS pasa a mostrar los hallazgos firmes vigentes del radar, aunque no entren en el bloque fijo del RESUMEN_4H.
+- Agrega pruebas de regresión para ambas fallas detectadas en la primera exportación real.
+
 # Changelog
 
 ## 12.1 — Google Sheet nueva definitiva

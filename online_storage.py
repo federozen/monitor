@@ -918,6 +918,7 @@ def guardar_mesa_editorial(desk: dict, ole_entries: list[dict], ole_coverage: li
     topics = list(desk.get("topics") or [])
     actions = list(desk.get("actions") or [])
     audit = list(desk.get("audit") or [])
+    findings = list(desk.get("findings") or [])
     meta = dict(desk.get("meta") or {})
     cut_key = str(meta.get("cut_key") or "")
 
@@ -986,6 +987,7 @@ def guardar_mesa_editorial(desk: dict, ole_entries: list[dict], ole_coverage: li
         item.get("overcoverage", False),
     ] for item in ole_coverage or []]
 
+    hallazgo_source = findings or [item for item in topics if item.get("section") == "HALLAZGOS"]
     hallazgo_rows = [[
         item.get("cut_key", cut_key), item.get("finding_status", "HALLAZGO"), item.get("priority", 0),
         item.get("noticiability", 0), item.get("confidence", 0),
@@ -993,7 +995,7 @@ def guardar_mesa_editorial(desk: dict, ole_entries: list[dict], ole_coverage: li
         item.get("confidence_reason", ""), item.get("topic", ""), item.get("what_happened", ""),
         item.get("why_it_matters", ""), item.get("ole_status", ""), item.get("action", ""),
         item.get("suggested_format", ""), item.get("sources", ""), item.get("source_urls", ""), item.get("url", ""),
-    ] for item in topics if item.get("section") == "HALLAZGOS"]
+    ] for item in hallazgo_source]
 
     source_values = [[
         item.get("source_id", ""), item.get("source", ""), item.get("zone", ""),

@@ -47,6 +47,21 @@ def stable_id(text: str, prefix: str = "a") -> str:
     return f"{prefix}_{digest}"
 
 
+def canonical_cluster_id(title: str) -> str:
+    """Devuelve el mismo identificador de historia en todas las capas.
+
+    La persistencia histórica usa ``monitor_core.normalizar_titulo``. Reutilizar
+    exactamente esa normalización evita que Temas, Recomendaciones, Cambios y
+    la mesa editorial generen cuatro IDs diferentes para el mismo título.
+    """
+    try:
+        from monitor_core import normalizar_titulo
+        base = " ".join(sorted(normalizar_titulo(title))) or normalize_text(title) or str(title or "")
+    except Exception:
+        base = " ".join(sorted(normalize_text(title).split())) or str(title or "")
+    return stable_id(base, "c")
+
+
 def clamp(value: float, low: float = 0, high: float = 100) -> int:
     return int(max(low, min(high, round(value))))
 

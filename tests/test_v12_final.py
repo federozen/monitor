@@ -237,3 +237,65 @@ class V121NewSheetDefaultsTests(unittest.TestCase):
             config = storage.leer_configuracion()
         mocked.assert_called_once_with("CONFIGURACION", storage.CONFIGURACION_HEADERS)
         self.assertEqual(config["max_temas_resumen"], "40")
+
+class V1211RegressionTests(unittest.TestCase):
+    def test_cluster_id_is_shared_by_storage_curator_briefing_and_desk(self):
+        import online_storage as storage
+        from editorial_agents.curator import curate
+        from editorial_agents.briefing import build_changes
+        from editorial_agents.utils import canonical_cluster_id
+
+        now = datetime(2026, 8, 5, 21, 30, tzinfo=TZ_AR)
+        title = "El Betis pulveriza al Arsenal"
+        expected = storage.cluster_id(title)
+        self.assertEqual(canonical_cluster_id(title), expected)
+
+        theme = {
+            "titulo": title,
+            "url": "https://example.com/betis",
+            "cant_medios": 2,
+            "tiene_ole": False,
+            "noticias": [{
+                "noticia": {
+                    "titulo": title,
+                    "url": "https://example.com/betis",
+                    "fecha_publicacion": (now - timedelta(minutes=20)).isoformat(),
+                    "date_trust": "publisher_timestamp",
+                    "publisher_original": "Fuente Uno",
+                },
+                "fuente": {"id": "source_one", "nombre": "Fuente Uno"},
+            }],
+        }
+        recs = curate([theme], [{"titulo": title, "nuevo": True, "delta": 1}], {})
+        self.assertEqual(recs[0]["cluster_id"], expected)
+
+        changes = build_changes([theme], [], recs)
+        self.assertEqual(changes[0]["cluster_id"], expected)
+
+        desk = build_editorial_desk([theme], changes, recs, [], [], now=now)
+        self.assertEqual(desk["topics"][0]["topic_id"], expected)
+        self.assertEqual(len(desk["actions"]), 1)
+        self.assertEqual(desk["actions"][0]["action"], "PUBLICAR AHORA")
+
+    def test_firm_recent_discovery_stays_in_visible_findings_outside_fixed_block(self):
+        now = datetime(2026, 8, 5, 21, 40, tzinfo=TZ_AR)
+        finding = {
+            "discovery_id": "d_recent",
+            "title": "Arquero marcó el gol del ascenso en el minuto 98",
+            "url": "https://example.com/keeper",
+            "status": "HALLAZGO",
+            "score": 75,
+            "noticiability": 75,
+            "confidence": 72,
+            "signals": ["RAREZA", "VISUAL"],
+            "why_it_matters": "Tiene desenlace extraordinario y video oficial.",
+            # 18:30 AR: dentro de las últimas cuatro horas, pero antes del bloque fijo 20:00.
+            "published_at": datetime(2026, 8, 5, 18, 30, tzinfo=TZ_AR).isoformat(),
+            "date_trust": "publisher_timestamp",
+            "publishers": ["Fuente oficial"],
+            "evidence": [{"publisher": "Fuente oficial", "url": "https://example.com/keeper"}],
+        }
+        desk = build_editorial_desk([], [], [], [finding], [], now=now)
+        self.assertEqual(desk["topics"], [])
+        self.assertEqual(len(desk["findings"]), 1)
+        self.assertEqual(desk["findings"][0]["topic"], finding["title"])

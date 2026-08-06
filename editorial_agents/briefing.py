@@ -6,7 +6,7 @@ from difflib import SequenceMatcher
 from typing import Any
 
 from .coverage import normalize_coverage_status
-from .utils import normalize_text, now_ar, stable_id, unique_strings
+from .utils import canonical_cluster_id, normalize_text, now_ar, stable_id, unique_strings
 
 
 def _int(value: Any, default: int = 0) -> int:
@@ -33,7 +33,7 @@ def _media(row: dict) -> int:
 
 
 def _cluster_id(row: dict) -> str:
-    return str(row.get("cluster_id") or row.get("ClusterID") or stable_id(normalize_text(_title(row)), "c"))
+    return str(row.get("cluster_id") or row.get("ClusterID") or canonical_cluster_id(_title(row)))
 
 
 def _has_ole(row: dict) -> bool:
