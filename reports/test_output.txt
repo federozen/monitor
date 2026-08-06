@@ -1,0 +1,49 @@
+test_briefing_reports_only_real_delta (test_agents.EditorialAgentTests.test_briefing_reports_only_real_delta) ... ok
+test_covered_equal_is_not_recommended_as_new (test_agents.EditorialAgentTests.test_covered_equal_is_not_recommended_as_new) ... ok
+test_discovery_prioritizes_rare_international_story (test_agents.EditorialAgentTests.test_discovery_prioritizes_rare_international_story) ... ok
+test_discovery_returns_best_candidates_even_below_strong_threshold (test_agents.EditorialAgentTests.test_discovery_returns_best_candidates_even_below_strong_threshold) ... ok
+test_report_separates_operations_and_findings (test_agents.EditorialAgentTests.test_report_separates_operations_and_findings) ... ok
+test_uncovered_recent_theme_is_actionable (test_agents.EditorialAgentTests.test_uncovered_recent_theme_is_actionable) ... ok
+test_complete_cut_can_replace_snapshot (test_agents.V113CutQualityTests.test_complete_cut_can_replace_snapshot) ... ok
+test_degraded_cut_preserves_previous_panorama (test_agents.V113CutQualityTests.test_degraded_cut_preserves_previous_panorama) ... ok
+test_ole_today_excludes_old_publication_and_old_explicit_title (test_agents.V114StrictTimeTests.test_ole_today_excludes_old_publication_and_old_explicit_title) ... ok
+test_summary_4h_excludes_explicit_old_date_in_title (test_agents.V114StrictTimeTests.test_summary_4h_excludes_explicit_old_date_in_title) ... ok
+test_summary_4h_excludes_old_dated_topics (test_agents.V114StrictTimeTests.test_summary_4h_excludes_old_dated_topics) ... ok
+test_ole_pagination_stops_at_previous_day (test_agents.V115OleAndSourcesTests.test_ole_pagination_stops_at_previous_day) ... ok
+test_trusted_sources_use_direct_pages (test_agents.V115OleAndSourcesTests.test_trusted_sources_use_direct_pages) ... ok
+test_ole_today_includes_old_note_updated_today (test_agents.V115OleTodayClassificationTests.test_ole_today_includes_old_note_updated_today) ... ok
+test_ole_today_rejects_undated_deep_page (test_agents.V115OleTodayClassificationTests.test_ole_today_rejects_undated_deep_page) ... ok
+test_direct_publisher_timestamp_is_accepted (test_agents.V116VerifiedFreshnessTests.test_direct_publisher_timestamp_is_accepted) ... ok
+test_discovery_rejects_google_news_only_timestamp (test_agents.V116VerifiedFreshnessTests.test_discovery_rejects_google_news_only_timestamp) ... ok
+test_google_news_timestamp_does_not_prove_freshness (test_agents.V116VerifiedFreshnessTests.test_google_news_timestamp_does_not_prove_freshness) ... ok
+test_new_undated_scaloni_anniversary_is_not_in_4h_summary (test_agents.V116VerifiedFreshnessTests.test_new_undated_scaloni_anniversary_is_not_in_4h_summary) ... ok
+test_new_undated_world_cup_story_is_not_in_4h_summary (test_agents.V116VerifiedFreshnessTests.test_new_undated_world_cup_story_is_not_in_4h_summary) ... ok
+test_ole_today_rejects_undated_first_page_item (test_agents.V116VerifiedFreshnessTests.test_ole_today_rejects_undated_first_page_item) ... ok
+test_editorial_desk_builds_free_summary_and_actions (test_agents.V11DeskTests.test_editorial_desk_builds_free_summary_and_actions) ... ok
+test_ole_today_groups_multiple_angles (test_agents.V11DeskTests.test_ole_today_groups_multiple_angles) ... ok
+test_ole_today_handles_equal_similarity_scores (test_agents.V11DeskTests.test_ole_today_handles_equal_similarity_scores) ... ok
+test_source_health_is_editor_friendly (test_agents.V11DeskTests.test_source_health_is_editor_friendly) ... ok
+test_rss_preserves_date_and_original_publisher (test_publishers.PublisherCountingTests.test_rss_preserves_date_and_original_publisher) ... ok
+test_same_publisher_in_two_discovery_feeds_counts_once (test_publishers.PublisherCountingTests.test_same_publisher_in_two_discovery_feeds_counts_once) ... ok
+test_two_original_publishers_form_a_cluster (test_publishers.PublisherCountingTests.test_two_original_publishers_form_a_cluster) ... ok
+test_scraper_returns_source_health (test_publishers.VigaSnapshotTests.test_scraper_returns_source_health) ... ok
+test_native_configuration_does_not_depend_on_legacy_sheet (test_v12_final.V121NewSheetDefaultsTests.test_native_configuration_does_not_depend_on_legacy_sheet) ... ok
+test_sheet_names_have_no_prefix_by_default (test_v12_final.V121NewSheetDefaultsTests.test_sheet_names_have_no_prefix_by_default) ... ok
+test_action_id_is_stable_across_cuts_without_real_change (test_v12_final.V12EditorialQualityTests.test_action_id_is_stable_across_cuts_without_real_change) ... ok
+test_audit_explains_unverified_exclusion (test_v12_final.V12EditorialQualityTests.test_audit_explains_unverified_exclusion) ... ok
+test_candidate_does_not_generate_derived_opportunity (test_v12_final.V12EditorialQualityTests.test_candidate_does_not_generate_derived_opportunity) ... ok
+test_candidate_is_audited_but_not_shown_as_firm_finding (test_v12_final.V12EditorialQualityTests.test_candidate_is_audited_but_not_shown_as_firm_finding) ... ok
+test_firm_finding_enters_summary_with_editorial_fields (test_v12_final.V12EditorialQualityTests.test_firm_finding_enters_summary_with_editorial_fields) ... ok
+test_medical_confirmation_is_a_real_change (test_v12_final.V12EditorialQualityTests.test_medical_confirmation_is_a_real_change) ... ok
+test_more_publishers_alone_is_not_a_real_change (test_v12_final.V12EditorialQualityTests.test_more_publishers_alone_is_not_a_real_change) ... ok
+test_ole_service_articles_for_boca_and_river_stay_separate (test_v12_final.V12EditorialQualityTests.test_ole_service_articles_for_boca_and_river_stay_separate) ... ok
+test_ole_today_separates_published_and_updated (test_v12_final.V12EditorialQualityTests.test_ole_today_separates_published_and_updated) ... ok
+test_reputable_source_alone_is_not_a_firm_finding (test_v12_final.V12EditorialQualityTests.test_reputable_source_alone_is_not_a_firm_finding) ... ok
+test_editorial_rows_match_headers_and_terminal_action_is_not_repeated (test_v12_final.V12StorageContractTests.test_editorial_rows_match_headers_and_terminal_action_is_not_repeated) ... ok
+
+----------------------------------------------------------------------
+Ran 42 tests in 0.041s
+
+OK
+  [fake_ok     ]   1 notas · 0.0s
+  [fake_bad    ] ERROR: fallo controlado · 0.0s

@@ -1,0 +1,357 @@
+{
+  "generated_at": "2026-08-05T18:35:00-03:00",
+  "changes": [
+    {
+      "change_id": "dlt_e19293fd5f22a0",
+      "cluster_id": "c_river_baja",
+      "change_type": "ACTUALIZAR NOTA",
+      "priority": 92,
+      "action": "ACTUALIZAR",
+      "coverage_status": "CUBIERTO_CON_DATO_NUEVO",
+      "title": "River confirmó la lesión y la baja por tres semanas de un titular",
+      "url": "https://demo.local/river-parte",
+      "what_changed": "la cobertura de Olé pasó de YA_CUBIERTO a CUBIERTO_CON_DATO_NUEVO; la acción sugerida cambió de OBSERVAR a ACTUALIZAR; apareció una confirmación oficial; se incorporó información médica; se agregó un plazo; la evidencia pasó de 2 a 3 publishers.",
+      "before": "Un titular de River está en duda",
+      "now": "River confirmó la lesión y la baja por tres semanas de un titular",
+      "media_now": 3,
+      "media_before": 2,
+      "has_ole": true,
+      "ole_match_title": "El titular de River que estaba en duda",
+      "ole_match_url": "https://demo.local/ole-river",
+      "reason": "El parte oficial agrega diagnóstico y plazo a una nota ya publicada."
+    },
+    {
+      "change_id": "dlt_8455412a79fdec",
+      "cluster_id": "c_boca_estadio",
+      "change_type": "PUBLICAR",
+      "priority": 82,
+      "action": "PUBLICAR AHORA",
+      "coverage_status": "NO_CUBIERTO",
+      "title": "Boca confirmó que jugará el pendiente en otro estadio",
+      "url": "https://demo.local/boca-estadio",
+      "what_changed": "la acción sugerida cambió de VERIFICAR a PUBLICAR AHORA; apareció una confirmación oficial; la evidencia pasó de 1 a 2 publishers.",
+      "before": "Boca evalúa jugar un pendiente en otro estadio",
+      "now": "Boca confirmó que jugará el pendiente en otro estadio",
+      "media_now": 2,
+      "media_before": 1,
+      "has_ole": false,
+      "ole_match_title": "",
+      "ole_match_url": "",
+      "reason": "La posibilidad pasó a comunicado oficial y afecta la logística del partido."
+    }
+  ],
+  "briefing": {
+    "created_at": "2026-08-05T18:35:58-03:00",
+    "title": "Resumen del corte 18:35",
+    "plain_text": "PANORAMA DEL CORTE\n- 2 temas agrupados; 2 con cambios reales y 0 sin cambios relevantes.\n\nPARA EVALUAR AHORA\n- Boca confirmó que jugará el pendiente en otro estadio — la acción sugerida cambió de VERIFICAR a PUBLICAR AHORA; apareció una confirmación oficial; la evidencia pasó de 1 a 2 publishers.\n\nQUÉ CAMBIÓ PARA AGREGAR\n- River confirmó la lesión y la baja por tres semanas de un titular — la cobertura de Olé pasó de YA_CUBIERTO a CUBIERTO_CON_DATO_NUEVO; la acción sugerida cambió de OBSERVAR a ACTUALIZAR; apareció una confirmación oficial; se incorporó información médica; se agregó un plazo; la evidencia pasó de 2 a 3 publishers.\n\nHALLAZGOS FIRMES\n- Arquero marcó el gol histórico del ascenso en el minuto 98 y el video se volvió viral — Tiene desenlace extraordinario, protagonista claro y material visual.",
+    "publish_count": 1,
+    "update_count": 1,
+    "verify_count": 0,
+    "growth_count": 0,
+    "discovery_count": 1,
+    "source_error_count": 0,
+    "top_change_ids": [
+      "dlt_e19293fd5f22a0",
+      "dlt_8455412a79fdec"
+    ],
+    "top_discovery_ids": [
+      "d_keeper"
+    ]
+  },
+  "desk": {
+    "topics": [
+      {
+        "topic_id": "c_river_baja",
+        "section": "FUTBOL ARGENTINO",
+        "topic": "River confirmó la lesión y la baja por tres semanas de un titular",
+        "what_happened": "River confirmó la lesión y la baja por tres semanas de un titular. Entre las publicaciones relacionadas aparece: Parte oficial: lesión y baja por tres semanas.",
+        "what_changed": "la cobertura de Olé pasó de YA_CUBIERTO a CUBIERTO_CON_DATO_NUEVO; la acción sugerida cambió de OBSERVAR a ACTUALIZAR; apareció una confirmación oficial; se incorporó información médica; se agregó un plazo; la evidencia pasó de 2 a 3 publishers.",
+        "why_it_matters": "El parte oficial agrega diagnóstico y plazo a una nota ya publicada.",
+        "ole_status": "CUBIERTO_CON_DATO_NUEVO",
+        "ole_title": "El titular de River que estaba en duda",
+        "ole_url": "https://demo.local/ole-river",
+        "action": "ACTUALIZAR",
+        "priority": 100,
+        "media_count": 3,
+        "sources": "River Oficial | Medio A",
+        "source_urls": "https://demo.local/river-oficial | https://demo.local/medio-river",
+        "url": "https://demo.local/river-parte",
+        "origin": "PANORAMA",
+        "order": 1,
+        "cut_key": "2026-08-05T16:00_20:00",
+        "window_start": "2026-08-05T16:00-03:00",
+        "window_end": "2026-08-05T20:00-03:00",
+        "generated_at": "2026-08-05T18:35:00-03:00",
+        "importance": "IMPRESCINDIBLE"
+      },
+      {
+        "topic_id": "c_boca_estadio",
+        "section": "FUTBOL ARGENTINO",
+        "topic": "Boca confirmó que jugará el pendiente en otro estadio",
+        "what_happened": "Boca confirmó que jugará el pendiente en otro estadio. Entre las publicaciones relacionadas aparece: Comunicado: Boca jugará el pendiente en otro estadio.",
+        "what_changed": "la acción sugerida cambió de VERIFICAR a PUBLICAR AHORA; apareció una confirmación oficial; la evidencia pasó de 1 a 2 publishers.",
+        "why_it_matters": "La posibilidad pasó a comunicado oficial y afecta la logística del partido.",
+        "ole_status": "NO_CUBIERTO",
+        "ole_title": "",
+        "ole_url": "",
+        "action": "PUBLICAR AHORA",
+        "priority": 99,
+        "media_count": 2,
+        "sources": "Boca Oficial",
+        "source_urls": "https://demo.local/boca-oficial",
+        "url": "https://demo.local/boca-estadio",
+        "origin": "PANORAMA",
+        "order": 2,
+        "cut_key": "2026-08-05T16:00_20:00",
+        "window_start": "2026-08-05T16:00-03:00",
+        "window_end": "2026-08-05T20:00-03:00",
+        "generated_at": "2026-08-05T18:35:00-03:00",
+        "importance": "IMPRESCINDIBLE"
+      },
+      {
+        "topic_id": "d_keeper",
+        "section": "HALLAZGOS",
+        "topic": "Arquero marcó el gol histórico del ascenso en el minuto 98 y el video se volvió viral",
+        "what_happened": "rareza; visual; consecuencia deportiva; no hay pieza equivalente en Olé",
+        "what_changed": "Detectado por el radar internacional en este corte.",
+        "why_it_matters": "Tiene desenlace extraordinario, protagonista claro y material visual.",
+        "ole_status": "NO CUBIERTO",
+        "ole_title": "",
+        "ole_url": "",
+        "action": "PROFUNDIZAR",
+        "priority": 91,
+        "media_count": 1,
+        "sources": "Liga Oficial | Medio Internacional",
+        "source_urls": "https://demo.local/keeper-video | https://demo.local/keeper-cronica",
+        "url": "https://demo.local/keeper",
+        "origin": "DESCUBRIMIENTO",
+        "finding_status": "HALLAZGO FUERTE",
+        "noticiability": 91,
+        "confidence": 82,
+        "signals": [
+          "RAREZA",
+          "VISUAL",
+          "DATO O RECORD",
+          "CONSECUENCIA DEPORTIVA"
+        ],
+        "confidence_reason": "video oficial; fecha directa; dos publishers originales",
+        "suggested_format": "NOTA BREVE + VIDEO",
+        "order": 3,
+        "cut_key": "2026-08-05T16:00_20:00",
+        "window_start": "2026-08-05T16:00-03:00",
+        "window_end": "2026-08-05T20:00-03:00",
+        "generated_at": "2026-08-05T18:35:00-03:00",
+        "importance": "IMPRESCINDIBLE"
+      }
+    ],
+    "actions": [
+      {
+        "action_id": "act_006cfd5f2c5f6e",
+        "cut_key": "2026-08-05T16:00_20:00",
+        "priority": 100,
+        "action": "ACTUALIZAR",
+        "status": "PENDIENTE",
+        "topic_id": "c_river_baja",
+        "topic": "River confirmó la lesión y la baja por tres semanas de un titular",
+        "new_data": "la cobertura de Olé pasó de YA_CUBIERTO a CUBIERTO_CON_DATO_NUEVO; la acción sugerida cambió de OBSERVAR a ACTUALIZAR; apareció una confirmación oficial; se incorporó información médica; se agregó un plazo; la evidencia pasó de 2 a 3 publishers.",
+        "ole_title": "El titular de River que estaba en duda",
+        "ole_url": "https://demo.local/ole-river",
+        "sources": "River Oficial | Medio A",
+        "source_urls": "https://demo.local/river-oficial | https://demo.local/medio-river",
+        "updated_at": "2026-08-05T18:35:00-03:00",
+        "notes": ""
+      },
+      {
+        "action_id": "act_0c7716d35e1b05",
+        "cut_key": "2026-08-05T16:00_20:00",
+        "priority": 99,
+        "action": "PUBLICAR AHORA",
+        "status": "PENDIENTE",
+        "topic_id": "c_boca_estadio",
+        "topic": "Boca confirmó que jugará el pendiente en otro estadio",
+        "new_data": "la acción sugerida cambió de VERIFICAR a PUBLICAR AHORA; apareció una confirmación oficial; la evidencia pasó de 1 a 2 publishers.",
+        "ole_title": "",
+        "ole_url": "",
+        "sources": "Boca Oficial",
+        "source_urls": "https://demo.local/boca-oficial",
+        "updated_at": "2026-08-05T18:35:00-03:00",
+        "notes": ""
+      },
+      {
+        "action_id": "act_a0f2e466511a04",
+        "cut_key": "2026-08-05T16:00_20:00",
+        "priority": 91,
+        "action": "PROFUNDIZAR",
+        "status": "PENDIENTE",
+        "topic_id": "d_keeper",
+        "topic": "Arquero marcó el gol histórico del ascenso en el minuto 98 y el video se volvió viral",
+        "new_data": "Detectado por el radar internacional en este corte.",
+        "ole_title": "",
+        "ole_url": "",
+        "sources": "Liga Oficial | Medio Internacional",
+        "source_urls": "https://demo.local/keeper-video | https://demo.local/keeper-cronica",
+        "updated_at": "2026-08-05T18:35:00-03:00",
+        "notes": ""
+      }
+    ],
+    "audit": [
+      {
+        "cut_key": "2026-08-05T16:00_20:00",
+        "item_type": "TEMA",
+        "item_id": "c_river_baja",
+        "freshness_state": "CONFIRMADA_O_PROBABLE",
+        "destination": "ELEGIBLE_RESUMEN_4H",
+        "topic": "River confirmó la lesión y la baja por tres semanas de un titular",
+        "reference_date": "2026-08-05T18:10-03:00",
+        "date_type": "publisher_timestamp",
+        "decision": "ACTUALIZAR",
+        "reason": "FECHA VERIFICADA EN VENTANA",
+        "sources": "River Oficial | Medio A",
+        "url": "https://demo.local/river-parte"
+      },
+      {
+        "cut_key": "2026-08-05T16:00_20:00",
+        "item_type": "TEMA",
+        "item_id": "c_boca_estadio",
+        "freshness_state": "CONFIRMADA_O_PROBABLE",
+        "destination": "ELEGIBLE_RESUMEN_4H",
+        "topic": "Boca confirmó que jugará el pendiente en otro estadio",
+        "reference_date": "2026-08-05T18:10-03:00",
+        "date_type": "publisher_timestamp",
+        "decision": "PUBLICAR AHORA",
+        "reason": "FECHA VERIFICADA EN VENTANA",
+        "sources": "Boca Oficial",
+        "url": "https://demo.local/boca-estadio"
+      },
+      {
+        "cut_key": "2026-08-05T16:00_20:00",
+        "item_type": "HALLAZGO",
+        "item_id": "d_keeper",
+        "freshness_state": "CONFIRMADA_O_PROBABLE",
+        "destination": "RESUMEN_4H",
+        "topic": "Arquero marcó el gol histórico del ascenso en el minuto 98 y el video se volvió viral",
+        "reference_date": "2026-08-05T18:10:00-03:00",
+        "date_type": "publisher_timestamp",
+        "decision": "PROFUNDIZAR",
+        "reason": "rareza; visual; consecuencia deportiva; no hay pieza equivalente en Olé",
+        "sources": "Liga Oficial | Medio Internacional",
+        "url": "https://demo.local/keeper"
+      }
+    ],
+    "meta": {
+      "cut_key": "2026-08-05T16:00_20:00",
+      "window_start": "2026-08-05T16:00-03:00",
+      "window_end": "2026-08-05T20:00-03:00",
+      "generated_at": "2026-08-05T18:35:00-03:00",
+      "topic_count": 3,
+      "action_count": 3,
+      "finding_count": 1,
+      "social_count": 0,
+      "broken_source_count": 0,
+      "minimum_target": 30,
+      "cut_quality": "COMPLETO",
+      "cut_quality_label": "",
+      "source_coverage_pct": 100,
+      "snapshot_preserved": false,
+      "carried_topic_count": 0,
+      "excluded_outside_window": 0,
+      "excluded_unverified_date": 0
+    }
+  },
+  "ole_today": [
+    {
+      "ole_id": "ole_89b442b526151c",
+      "first_seen": "2026-08-05T18:35:00-03:00",
+      "last_seen": "2026-08-05T18:35:00-03:00",
+      "record_type": "PUBLICADA_HOY",
+      "date_confidence": "CONFIRMADA",
+      "origin": "ultimas",
+      "source_page": 1,
+      "published_at": "2026-08-05T15:35:00-03:00",
+      "updated_at": "2026-08-05T18:10:00-03:00",
+      "section": "RIVER",
+      "topic_id": "ot_08fbe5a2e401d3",
+      "topic": "El titular de River que estaba en duda",
+      "focus": "FORMACION",
+      "title": "El titular de River que estaba en duda",
+      "url": "https://demo.local/ole-river",
+      "entities": [
+        "River"
+      ],
+      "related_external": [
+        "River confirmó la lesión y la baja por tres semanas de un titular"
+      ],
+      "suggested_action": "ACTUALIZAR"
+    },
+    {
+      "ole_id": "ole_b645add1e4425a",
+      "first_seen": "2026-08-05T18:35:00-03:00",
+      "last_seen": "2026-08-05T18:35:00-03:00",
+      "record_type": "PUBLICADA_HOY",
+      "date_confidence": "CONFIRMADA",
+      "origin": "ultimas",
+      "source_page": 1,
+      "published_at": "2026-08-05T18:10:00-03:00",
+      "updated_at": "",
+      "section": "BOCA",
+      "topic_id": "ot_e22fb77d4548aa",
+      "topic": "Boca: hora y TV del próximo partido",
+      "focus": "SERVICIO",
+      "title": "Boca: hora y TV del próximo partido",
+      "url": "https://demo.local/ole-boca-servicio",
+      "entities": [],
+      "related_external": [],
+      "suggested_action": ""
+    }
+  ],
+  "ole_groups": [
+    {
+      "topic_id": "ot_e22fb77d4548aa",
+      "topic": "Boca: hora y TV del próximo partido",
+      "piece_count": 1,
+      "published_today": 1,
+      "updated_today": 0,
+      "sections": [
+        "BOCA"
+      ],
+      "focuses": [
+        "SERVICIO"
+      ],
+      "first_seen": "2026-08-05T18:35:00-03:00",
+      "last_seen": "2026-08-05T18:35:00-03:00",
+      "last_title": "Boca: hora y TV del próximo partido",
+      "last_url": "https://demo.local/ole-boca-servicio",
+      "titles": [
+        "Boca: hora y TV del próximo partido"
+      ],
+      "external_updates": [],
+      "suggested_action": "YA CUBIERTO / SEGUIR",
+      "overcoverage": false
+    },
+    {
+      "topic_id": "ot_08fbe5a2e401d3",
+      "topic": "El titular de River que estaba en duda",
+      "piece_count": 1,
+      "published_today": 1,
+      "updated_today": 0,
+      "sections": [
+        "RIVER"
+      ],
+      "focuses": [
+        "FORMACION"
+      ],
+      "first_seen": "2026-08-05T18:35:00-03:00",
+      "last_seen": "2026-08-05T18:35:00-03:00",
+      "last_title": "El titular de River que estaba en duda",
+      "last_url": "https://demo.local/ole-river",
+      "titles": [
+        "El titular de River que estaba en duda"
+      ],
+      "external_updates": [
+        "River confirmó la lesión y la baja por tres semanas de un titular"
+      ],
+      "suggested_action": "ACTUALIZAR",
+      "overcoverage": false
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "description": "Tres historias vivas para una demo sin red",
+  "stories": [
+    {
+      "id": "c_river_baja",
+      "title": "River confirmó la lesión y el plazo de recuperación de un titular",
+      "stage_before": "duda",
+      "stage_now": "parte oficial",
+      "expected_action": "ACTUALIZAR"
+    },
+    {
+      "id": "c_boca_estadio",
+      "title": "Boca confirmó que jugará un pendiente en otro estadio",
+      "stage_before": "posibilidad",
+      "stage_now": "comunicado oficial",
+      "expected_action": "PUBLICAR AHORA"
+    },
+    {
+      "id": "d_keeper",
+      "title": "Arquero marcó el gol del ascenso en el minuto 98 y el video se volvió viral",
+      "stage_before": "sin registro",
+      "stage_now": "dos fuentes y video oficial",
+      "expected_action": "PROFUNDIZAR"
+    }
+  ]
+}
