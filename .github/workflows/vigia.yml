@@ -2,8 +2,7 @@ name: Monitor deportivo - mesa editorial
 
 on:
   schedule:
-    - cron: "5,35 10-23 * * *"   # cada 30 min: 07:05 a 20:35 de Argentina
-    - cron: "5,35 0-4 * * *"     # cada 30 min: 21:05 a 01:35 de Argentina
+    - cron: "5,35 * * * *"   # cada 30 minutos, las 24 horas
   workflow_dispatch: {}
 
 permissions:
@@ -15,7 +14,6 @@ concurrency:
 
 jobs:
   monitor:
-    if: github.event_name == 'workflow_dispatch' || vars.AUTOMATION_ENABLED == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 18
     steps:
@@ -38,8 +36,14 @@ jobs:
           SCRAPE_MAX_WORKERS: ${{ vars.SCRAPE_MAX_WORKERS || '5' }}
           GNEWS_MIN_INTERVAL_SECONDS: ${{ vars.GNEWS_MIN_INTERVAL_SECONDS || '0.45' }}
           GNEWS_RETRY_ATTEMPTS: ${{ vars.GNEWS_RETRY_ATTEMPTS || '2' }}
-          OLE_MAX_PAGES: ${{ vars.OLE_MAX_PAGES || '8' }}
-          OLE_DETAIL_DATE_LIMIT: ${{ vars.OLE_DETAIL_DATE_LIMIT || '35' }}
+          OLE_MAX_PAGES: ${{ vars.OLE_MAX_PAGES || '12' }}
+          OLE_DETAIL_DATE_LIMIT: ${{ vars.OLE_DETAIL_DATE_LIMIT || '55' }}
+          DATE_ENRICH_ENABLED: ${{ vars.DATE_ENRICH_ENABLED || 'true' }}
+          DATE_ENRICH_MAX_ARTICLES: ${{ vars.DATE_ENRICH_MAX_ARTICLES || '48' }}
+          DATE_ENRICH_CLUSTER_MAX: ${{ vars.DATE_ENRICH_CLUSTER_MAX || '60' }}
+          DATE_ENRICH_CLUSTER_ARTICLES: ${{ vars.DATE_ENRICH_CLUSTER_ARTICLES || '72' }}
+          DATE_ENRICH_TIMEOUT: ${{ vars.DATE_ENRICH_TIMEOUT || '8' }}
+          DATE_ENRICH_WORKERS: ${{ vars.DATE_ENRICH_WORKERS || '6' }}
           DISCOVERY_MAX_AGE_HOURS: ${{ vars.DISCOVERY_MAX_AGE_HOURS || '12' }}
           DISCOVERY_MIN_SCORE: ${{ vars.DISCOVERY_MIN_SCORE || '58' }}
           TELEGRAM_MODE: ${{ vars.TELEGRAM_MODE || 'off' }}
