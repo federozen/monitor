@@ -42,3 +42,11 @@
 - Separó `PUBLICADA_HOY` y `ACTUALIZADA_HOY`.
 - Conserva acciones abiertas y no repite las resueltas sin un cambio real.
 - Oculta hojas técnicas y mantiene visibles las editoriales.
+
+## 12.1.3 — verificación por historia y candidatos visibles
+
+- Segunda pasada de fechas distribuida por cluster para evitar que el presupuesto se concentre en varias notas del mismo tema.
+- `Noticias` prioriza en el snapshot técnico las notas con metadata de artículo verificada.
+- `HALLAZGOS` muestra también `CANDIDATO PARA EXPLORAR`, claramente marcado y con acción `VERIFICAR`; los candidatos no entran en `RESUMEN_4H` ni generan acciones firmes.
+- Mayor profundidad predeterminada para recorrer `Olé Hoy` hasta acercarse a la medianoche real.
+- Nuevos contadores de clusters consultados y confirmados en `Control`.

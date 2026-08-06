@@ -22,7 +22,7 @@ import sheets_memoria as mem
 import online_storage as online
 from editorial_agents import orchestrator as agent_orchestrator
 from editorial_agents import cut_quality
-from editorial_agents.date_enrichment import enrich_results_dates
+from editorial_agents.date_enrichment import enrich_results_dates, enrich_cluster_dates
 
 
 def clave_tema(titulo: str) -> str:
@@ -197,6 +197,15 @@ def main():
 
     print("\n2) Tendencias y momentum...")
     tendencias = calcular_tendencias(resultados)
+    print("\n2b) Repartiendo verificación de fechas entre historias...")
+    cluster_date_stats = enrich_cluster_dates(tendencias)
+    print(
+        "   clusters fechados: "
+        f"{cluster_date_stats.get('clusters_confirmed', 0)}/"
+        f"{cluster_date_stats.get('clusters_requested', 0)} consultados · "
+        f"{cluster_date_stats.get('requested', 0)} notas abiertas · "
+        f"{cluster_date_stats.get('failed', 0)} sin metadata"
+    )
     if cfg.get("ignorar"):
         antes = len(tendencias)
         tendencias = [c for c in tendencias
@@ -356,6 +365,10 @@ def main():
                     "fechas_actualizacion_confirmadas": date_stats.get("updated", 0),
                     "fechas_notas_consultadas": date_stats.get("requested", 0),
                     "fechas_sin_metadata": date_stats.get("failed", 0),
+                    "fechas_clusters_consultados": cluster_date_stats.get("clusters_requested", 0),
+                    "fechas_clusters_confirmados": cluster_date_stats.get("clusters_confirmed", 0),
+                    "fechas_cluster_notas_consultadas": cluster_date_stats.get("requested", 0),
+                    "fechas_cluster_sin_metadata": cluster_date_stats.get("failed", 0),
                 },
                 preserve_previous=quality.get("preserve_previous", False),
                 quality_info=quality,

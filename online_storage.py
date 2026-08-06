@@ -370,7 +370,24 @@ def guardar_snapshot_online(resultados: dict, tendencias: list, agenda: list,
     per_source = max(5, max_news // max(len(resultados), 1))
     for fid, items in resultados.items():
         fuente = fuentes_por_id.get(fid, {"id": fid, "nombre": fid})
-        for n in items[:per_source]:
+        def _snapshot_rank(n):
+            trust = str(n.get("date_trust") or "").lower()
+            trust_score = {
+                "article_metadata": 5, "official_timestamp": 5,
+                "publisher_metadata": 5, "publisher_timestamp": 4,
+                "rss_publisher_timestamp": 4, "listing_timestamp": 3,
+                "discovery_timestamp": 1, "publisher_date_only": 1,
+                "missing": 0, "unverified": 0,
+            }.get(trust, 2)
+            raw_date = str(n.get("fecha_actualizacion") or n.get("fecha_publicacion_verificada")
+                           or n.get("fecha_publicacion") or "")
+            return (trust_score, raw_date, bool(n.get("url_final")))
+
+        # El snapshot técnico debe mostrar primero las notas cuya fecha fue
+        # realmente verificada. Antes se cortaba por orden de portada y muchas
+        # verificaciones quedaban fuera de la hoja aunque sí se hubieran usado.
+        ordered_items = sorted(items, key=_snapshot_rank, reverse=True)
+        for n in ordered_items[:per_source]:
             publisher = n.get("publisher_original") or fuente.get("nombre", fid)
             canal = "Google News" if (fuente.get("es_rss") and "news.google.com" in fuente.get("url", "")) else (
                 "RSS" if fuente.get("es_rss") else "Web directa"
