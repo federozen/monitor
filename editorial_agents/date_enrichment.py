@@ -397,3 +397,157 @@ def enrich_results_dates(results: dict[str, list[dict]], sources: list[dict], *,
             if final_url and "news.google.com" not in final_url:
                 news["url_final"] = final_url
     return stats
+
+
+def enrich_cluster_dates(themes: list[dict], *, max_clusters: int | None = None,
+                         max_articles: int | None = None, timeout: int | None = None,
+                         workers: int | None = None, now: datetime | None = None,
+                         fetcher=fetch_article_dates) -> dict[str, int]:
+    """Verifica al menos una nota directa por historia todavía sin fecha fiable.
+
+    La primera pasada trabaja por fuente y puede concentrar consultas en varias
+    notas del mismo tema. Esta segunda pasada se ejecuta después del clustering
+    y reparte el presupuesto entre historias distintas. Modifica las noticias
+    referenciadas por cada cluster *in-place*, por lo que el resumen editorial
+    recibe las fechas sin reconstruir los clusters.
+    """
+    if str(os.environ.get("DATE_ENRICH_ENABLED", "true")).strip().lower() in {"0", "false", "no", "off"}:
+        return {
+            "clusters_considered": 0, "clusters_requested": 0,
+            "clusters_confirmed": 0, "requested": 0,
+            "confirmed": 0, "updated": 0, "failed": 0,
+        }
+
+    max_clusters = max(0, min(120, int(
+        max_clusters if max_clusters is not None
+        else os.environ.get("DATE_ENRICH_CLUSTER_MAX", "60") or 60
+    )))
+    max_articles = max(0, min(160, int(
+        max_articles if max_articles is not None
+        else os.environ.get("DATE_ENRICH_CLUSTER_ARTICLES", "72") or 72
+    )))
+    timeout = max(3, min(20, int(
+        timeout if timeout is not None
+        else os.environ.get("DATE_ENRICH_TIMEOUT", "8") or 8
+    )))
+    workers = max(1, min(8, int(
+        workers if workers is not None
+        else os.environ.get("DATE_ENRICH_WORKERS", "6") or 6
+    )))
+    current = (now or now_ar()).astimezone(TZ_AR)
+    untrusted = {"", "missing", "unverified", "publisher_date_only", "discovery_timestamp"}
+
+    cluster_options: list[tuple[int, str, list[tuple[int, str, dict]]]] = []
+    considered = 0
+    for position, theme in enumerate((themes or [])[:max_clusters]):
+        entries = theme.get("noticias") or []
+        if not isinstance(entries, list):
+            continue
+        considered += 1
+        already_trusted = False
+        options: list[tuple[int, str, dict]] = []
+        for entry in entries:
+            if not isinstance(entry, dict):
+                continue
+            news = entry.get("noticia") if isinstance(entry.get("noticia"), dict) else entry
+            source = entry.get("fuente") if isinstance(entry.get("fuente"), dict) else {}
+            trust = str(news.get("date_trust") or "").lower()
+            published = parse_datetime(
+                news.get("fecha_publicacion_verificada") or news.get("fecha_publicacion")
+            )
+            updated = parse_datetime(news.get("fecha_actualizacion"))
+            if (published or updated) and trust not in untrusted:
+                already_trusted = True
+                break
+
+            raw_url = str(news.get("url_final") or news.get("url") or "")
+            target = _embedded_google_url(raw_url) if "news.google.com" in raw_url else raw_url
+            if not _valid_article_url(target):
+                continue
+            source_id = str(news.get("source_id") or source.get("id") or "")
+            score = _source_priority(source_id, source, news)
+            if "news.google.com" not in raw_url:
+                score += 22
+            channel = normalize_text(str(news.get("discovery_channel") or ""))
+            if channel and channel != "google news":
+                score += 10
+            # Un cluster con más publishers merece gastar antes una consulta.
+            score += min(18, int(theme.get("cant_medios") or 0) * 3)
+            options.append((score, target, news))
+        if already_trusted or not options:
+            continue
+        options.sort(key=lambda item: (-item[0], item[1]))
+        cluster_key = str(theme.get("titulo") or f"cluster_{position}")
+        cluster_options.append((position, cluster_key, options))
+
+    # Primera ronda: una URL por historia. Segunda: respaldo para las historias
+    # que todavía tengan otra fuente directa, hasta agotar el presupuesto.
+    selected: list[str] = []
+    refs_by_url: dict[str, list[dict]] = {}
+    cluster_by_url: dict[str, set[str]] = {}
+    seen_urls: set[str] = set()
+    for round_index in (0, 1):
+        for _position, cluster_key, options in cluster_options:
+            if len(selected) >= max_articles:
+                break
+            if round_index >= len(options):
+                continue
+            _score, url, news = options[round_index]
+            refs_by_url.setdefault(url, []).append(news)
+            cluster_by_url.setdefault(url, set()).add(cluster_key)
+            if url not in seen_urls:
+                selected.append(url)
+                seen_urls.add(url)
+        if len(selected) >= max_articles:
+            break
+
+    stats = {
+        "clusters_considered": considered,
+        "clusters_requested": len({key for url in selected for key in cluster_by_url.get(url, set())}),
+        "clusters_confirmed": 0,
+        "requested": len(selected), "confirmed": 0, "updated": 0, "failed": 0,
+    }
+    if not selected:
+        return stats
+
+    fetched: dict[str, dict[str, Any]] = {}
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        futures = {pool.submit(fetcher, url, timeout): url for url in selected}
+        for future in as_completed(futures):
+            url = futures[future]
+            try:
+                fetched[url] = future.result() or {}
+            except Exception as exc:
+                fetched[url] = {"status": type(exc).__name__}
+
+    future_limit = current + timedelta(hours=2)
+    oldest_reasonable = current - timedelta(days=3660)
+    confirmed_clusters: set[str] = set()
+    for target in selected:
+        result = fetched.get(target, {})
+        published = parse_datetime(result.get("published_at"))
+        updated = parse_datetime(result.get("updated_at"))
+        if published and not (oldest_reasonable <= published <= future_limit):
+            published = None
+        if updated and not (oldest_reasonable <= updated <= future_limit):
+            updated = None
+        if not published and not updated:
+            stats["failed"] += 1
+            continue
+        confirmed_clusters.update(cluster_by_url.get(target, set()))
+        for news in refs_by_url.get(target, []):
+            if published:
+                news["fecha_publicacion"] = published.isoformat(timespec="seconds")
+                news["fecha_publicacion_verificada"] = news["fecha_publicacion"]
+                news["date_trust"] = "article_metadata"
+                news["date_origin"] = str(result.get("published_origin") or "article_metadata")
+                stats["confirmed"] += 1
+            if updated:
+                news["fecha_actualizacion"] = updated.isoformat(timespec="seconds")
+                news["update_origin"] = str(result.get("updated_origin") or "article_metadata")
+                stats["updated"] += 1
+            final_url = str(result.get("final_url") or "")
+            if final_url and "news.google.com" not in final_url:
+                news["url_final"] = final_url
+    stats["clusters_confirmed"] = len(confirmed_clusters)
+    return stats

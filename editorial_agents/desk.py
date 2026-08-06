@@ -331,12 +331,19 @@ def build_editorial_desk(themes: list[dict], changes: list[dict], recommendation
         finding_status = str(discovery.get("status") or discovery.get("Estado") or "CANDIDATO PARA EXPLORAR").upper()
         fresh = _discovery_in_cut(discovery, start, now)
         firm = finding_status in {"HALLAZGO FUERTE", "HALLAZGO"}
-        # HALLAZGOS es una bandeja editorial viva, no solo una copia del
-        # resumen de bloque. Conserva los hallazgos firmes del radar actual
-        # aunque hayan aparecido antes del inicio exacto del bloque 4H.
-        if firm:
+        # HALLAZGOS es una bandeja editorial viva. Muestra tanto hallazgos
+        # firmes como candidatos, pero el estado y la acción dejan claro que un
+        # candidato no es una recomendación de publicación. Solo los firmes
+        # pueden entrar al RESUMEN_4H.
+        show_in_findings = firm or finding_status == "CANDIDATO PARA EXPLORAR"
+        if show_in_findings:
             evidence = discovery.get("evidence") or discovery.get("Evidencia") or []
             sources, source_urls = _source_line(evidence if isinstance(evidence, list) else [])
+            candidate_action = (
+                "PROFUNDIZAR" if finding_status == "HALLAZGO FUERTE"
+                else "SEGUIR" if finding_status == "HALLAZGO"
+                else "VERIFICAR"
+            )
             visible_findings.append({
                 "cut_key": cut_key,
                 "finding_status": finding_status,
@@ -349,7 +356,7 @@ def build_editorial_desk(themes: list[dict], changes: list[dict], recommendation
                 "what_happened": str(discovery.get("reason") or discovery.get("Motivo") or title),
                 "why_it_matters": str(discovery.get("why_it_matters") or discovery.get("PorQueImporta") or ""),
                 "ole_status": str(discovery.get("ole_status") or discovery.get("EstadoOle") or "NO_CUBIERTO"),
-                "action": "PROFUNDIZAR" if finding_status == "HALLAZGO FUERTE" else "SEGUIR",
+                "action": candidate_action,
                 "suggested_format": str(discovery.get("suggested_format") or discovery.get("Formato") or "NOTA BREVE"),
                 "sources": sources or str(discovery.get("Publishers") or " | ".join(discovery.get("publishers", []) or [])),
                 "source_urls": source_urls,
@@ -485,6 +492,8 @@ def build_editorial_desk(themes: list[dict], changes: list[dict], recommendation
         "topic_count": len(selected),
         "action_count": len(actions),
         "finding_count": len(visible_findings),
+        "firm_finding_count": sum(1 for item in visible_findings if item.get("finding_status") in {"HALLAZGO FUERTE", "HALLAZGO"}),
+        "candidate_finding_count": sum(1 for item in visible_findings if item.get("finding_status") == "CANDIDATO PARA EXPLORAR"),
         "social_count": sum(1 for item in selected if item["section"] == "BUZON SOCIAL"),
         "broken_source_count": len(broken),
         "minimum_target": min_topics,
