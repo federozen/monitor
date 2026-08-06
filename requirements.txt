@@ -1,12 +1,11 @@
-# Núcleo (fase 1): fechas y zona horaria
-python-dateutil>=2.9,<3
-tzdata>=2024.1
-
-# Integración (fase 2): fuentes reales + Google Sheets
+streamlit>=1.36
+anthropic>=0.40
 requests>=2.31
-feedparser>=6.0
-gspread>=6.0
-
-# Enriquecimiento de fecha (fase 2.1): leer la nota y extraer datePublished
 beautifulsoup4>=4.12
 lxml>=5.0
+gspread>=6.0
+pdfplumber
+scikit-learn
+joblib
+pandas
+openpyxl
