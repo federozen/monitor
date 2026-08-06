@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from .utils import normalize_text, unique_strings
@@ -16,15 +17,52 @@ STATUS_WORDS = {
 
 GENERIC_WORDS = {
     "partido", "equipo", "futbol", "club", "jugador", "tecnico", "liga",
-    "copa", "torneo", "fecha", "hoy", "manana", "ultimo", "nueva", "nuevo",
+    "copa", "torneo", "fecha", "hoy", "manana", "ultimo", "ultima", "nueva", "nuevo",
     "tras", "ante", "para", "con", "sin", "sobre", "desde", "vivo", "hora",
     "como", "ver", "juega", "jugar", "online", "minuto", "formaciones",
+    "por", "del", "las", "los", "una", "uno", "unos", "unas", "que", "esta",
+    "este", "sus", "the", "and", "for", "with", "from", "after", "before",
+    "today", "live", "watch", "report", "news", "latest", "football", "soccer",
 }
 
 COVERAGE_ALIASES = {
     "CUBIERTO_IGUAL": "YA_CUBIERTO",
     "CUBIERTO_CON_NOVEDAD": "CUBIERTO_CON_DATO_NUEVO",
     "CUBIERTO_PARCIAL": "CUBIERTO_PARCIALMENTE",
+}
+
+# Entidades internacionales frecuentes que no están en el diccionario local de
+# monitor_core. Se exige más de una señal para evitar que una sola palabra como
+# "Arsenal" vincule dos historias completamente diferentes.
+_ENTITY_ALIASES = {
+    "arsenal": ("arsenal",), "betis": ("betis", "real betis"),
+    "chelsea": ("chelsea",), "liverpool": ("liverpool",),
+    "manchester city": ("manchester city", "man city"),
+    "manchester united": ("manchester united", "man united"),
+    "real madrid": ("real madrid",), "barcelona": ("barcelona", "barca"),
+    "atletico madrid": ("atletico madrid", "atletico de madrid"),
+    "psg": ("psg", "paris saint germain"), "bayern": ("bayern", "bayern munich"),
+    "juventus": ("juventus", "juve"), "milan": ("ac milan", "milan"),
+    "inter": ("inter milan", "inter de milan"), "napoli": ("napoli",),
+    "roma": ("as roma", "roma"), "flamengo": ("flamengo",),
+    "palmeiras": ("palmeiras",), "santos": ("santos",),
+    "vinicius": ("vinicius", "vini jr", "vinicius junior"),
+    "mbappe": ("mbappe",), "haaland": ("haaland",), "salah": ("salah",),
+    "cristiano ronaldo": ("cristiano ronaldo", "cristiano"),
+}
+
+_EVENT_CONCEPTS = {
+    "RESULTADO_GANO": {"gano", "vencio", "triunfo", "victoria", "beat", "beaten", "won", "derroto", "supero"},
+    "RESULTADO_GOLEADA": {"goleo", "goleada", "pulveriza", "aplasto", "thrash", "rout", "hammered"},
+    "RESULTADO_EMPATE": {"empato", "empate", "draw", "drew"},
+    "MERCADO": {"fichaje", "refuerzo", "contrato", "negocia", "interes", "oferta", "transfer", "signing", "rumor"},
+    "LESION": {"lesion", "baja", "diagnostico", "operacion", "cirugia", "injury", "injured", "out"},
+    "SANCION": {"sancion", "suspendido", "expulsion", "ban", "banned", "suspension"},
+    "PROGRAMACION": {"fecha", "horario", "sede", "estadio", "postergado", "suspendido", "schedule", "venue"},
+    "CONVOCATORIA": {"convocados", "convocado", "lista", "nomina", "squad", "call up"},
+    "FORMACION": {"formacion", "titular", "once", "lineup", "starting"},
+    "DECLARACION": {"dijo", "declaro", "aseguro", "hablo", "said", "claims"},
+    "TITULO": {"campeon", "titulo", "final", "ascenso", "descenso", "champion", "promotion", "relegation"},
 }
 
 
@@ -34,20 +72,75 @@ def normalize_coverage_status(value: str) -> str:
 
 
 def _tokens(title: str) -> set[str]:
-    return {t for t in normalize_text(title).split() if len(t) >= 3}
+    return {token for token in normalize_text(title).split() if len(token) >= 3}
 
 
 def _distinctive(title: str) -> set[str]:
     return _tokens(title) - GENERIC_WORDS
 
 
-def _similarity(a: str, b: str) -> float:
-    ta, tb = _distinctive(a), _distinctive(b)
-    if not ta or not tb:
-        ta, tb = _tokens(a), _tokens(b)
-    if not ta or not tb:
-        return 0.0
-    return len(ta & tb) / len(ta | tb)
+def _known_entities(title: str) -> set[str]:
+    normalized = f" {normalize_text(title)} "
+    entities: set[str] = set()
+    try:
+        from monitor_core import detectar_entidades
+        entities.update(normalize_text(item) for item in detectar_entidades(title))
+    except Exception:
+        pass
+    for canonical, aliases in _ENTITY_ALIASES.items():
+        if any(f" {normalize_text(alias)} " in normalized for alias in aliases):
+            entities.add(canonical)
+    return entities
+
+
+def _event_concepts(title: str) -> set[str]:
+    tokens = _tokens(title)
+    normalized = normalize_text(title)
+    out: set[str] = set()
+    for concept, hints in _EVENT_CONCEPTS.items():
+        if any((hint in tokens) if " " not in hint else (hint in normalized) for hint in hints):
+            out.add(concept)
+    return out
+
+
+def _similarity_details(source: str, candidate: str) -> dict[str, Any]:
+    source_tokens = _distinctive(source)
+    candidate_tokens = _distinctive(candidate)
+    shared_tokens = source_tokens & candidate_tokens
+    union = source_tokens | candidate_tokens
+    jaccard = len(shared_tokens) / len(union) if union else 0.0
+    containment = len(shared_tokens) / min(len(source_tokens), len(candidate_tokens)) if source_tokens and candidate_tokens else 0.0
+    source_entities = _known_entities(source)
+    candidate_entities = _known_entities(candidate)
+    shared_entities = source_entities & candidate_entities
+    shared_events = _event_concepts(source) & _event_concepts(candidate)
+    exact = normalize_text(source) == normalize_text(candidate)
+
+    valid = exact
+    valid = valid or (len(shared_tokens) >= 4 and containment >= 0.50)
+    valid = valid or (len(shared_entities) >= 2 and (len(shared_tokens) >= 2 or bool(shared_events)))
+    valid = valid or (len(shared_entities) >= 1 and len(shared_tokens) >= 3 and bool(shared_events))
+    valid = valid or (not source_entities and not candidate_entities and len(shared_tokens) >= 5 and containment >= 0.60)
+
+    score = (
+        containment * 0.43
+        + jaccard * 0.22
+        + min(0.24, len(shared_entities) * 0.12)
+        + min(0.16, len(shared_events) * 0.08)
+    )
+    if exact:
+        score = 1.0
+    elif not valid:
+        score = min(score, 0.29)
+    return {
+        "score": min(1.0, score),
+        "valid": valid,
+        "shared_tokens": sorted(shared_tokens),
+        "shared_entities": sorted(shared_entities),
+        "shared_events": sorted(shared_events),
+        "containment": containment,
+        "jaccard": jaccard,
+    }
 
 
 def normalize_ole_items(items: list[dict] | None) -> list[dict]:
@@ -71,20 +164,39 @@ def normalize_ole_items(items: list[dict] | None) -> list[dict]:
 
 
 def best_ole_match(title: str, ole_items: list[dict]) -> dict:
-    best: dict[str, Any] = {"score": 0.0, "title": "", "url": "", "shared": []}
-    source_distinctive = _distinctive(title)
+    best: dict[str, Any] = {
+        "score": 0.0, "title": "", "url": "", "shared": [], "valid": False,
+        "shared_entities": [], "shared_events": [],
+    }
     for item in ole_items:
-        candidate = item.get("title", "")
-        sim = _similarity(title, candidate)
-        shared = sorted(source_distinctive & _distinctive(candidate))
-        entity_bonus = min(0.22, len(shared) * 0.07)
-        score = min(1.0, sim + entity_bonus)
-        if score > best["score"]:
-            best = {"score": score, "title": candidate, "url": item.get("url", ""), "shared": shared}
+        candidate_title = str(item.get("title") or "")
+        candidate_text = f"{candidate_title}. {item.get('summary', '')}".strip()
+        details = _similarity_details(title, candidate_text)
+        if details["score"] > best["score"]:
+            best = {
+                "score": details["score"],
+                "title": candidate_title,
+                "url": item.get("url", ""),
+                "shared": details["shared_tokens"],
+                "valid": details["valid"],
+                "shared_entities": details["shared_entities"],
+                "shared_events": details["shared_events"],
+            }
+    # Una coincidencia inválida no se muestra como nota relacionada. Esto evita
+    # que el editor vea un enlace engañoso por compartir un solo club o apellido.
+    if not best.get("valid"):
+        return {
+            **best,
+            "score": min(float(best.get("score", 0) or 0), 0.29),
+            "title": "",
+            "url": "",
+        }
     return best
 
 
 def _new_detail_tokens(external_titles: list[str], ole_title: str) -> list[str]:
+    if not ole_title:
+        return []
     ole = _distinctive(ole_title)
     candidates: list[str] = []
     for title in external_titles:
@@ -94,26 +206,45 @@ def _new_detail_tokens(external_titles: list[str], ole_title: str) -> list[str]:
     return unique_strings(candidates)[:8]
 
 
+def _direct_ole_evidence(theme: dict) -> bool:
+    for item in theme.get("noticias", []) or []:
+        news = item.get("noticia", {}) if isinstance(item, dict) else {}
+        source = item.get("fuente", {}) if isinstance(item, dict) else {}
+        identity = normalize_text(
+            f"{news.get('source_id', '')} {news.get('publisher_original', '')} "
+            f"{source.get('id', '')} {source.get('nombre', '')}"
+        )
+        if identity == "ole" or " ole " in f" {identity} ":
+            return True
+    return False
+
+
 def enrich_theme_coverage(theme: dict, ole_items: list[dict]) -> dict:
     enriched = dict(theme)
     source_titles = [
         str((item.get("noticia") or {}).get("titulo") or "")
         for item in theme.get("noticias", []) or []
+        if isinstance(item, dict)
     ]
     representative = str(theme.get("titulo") or "")
     matches = [best_ole_match(title, ole_items) for title in [representative, *source_titles] if title]
-    match = max(matches, key=lambda x: x.get("score", 0), default={"score": 0.0})
+    match = max(matches, key=lambda item: float(item.get("score", 0) or 0), default={"score": 0.0, "valid": False})
     score = float(match.get("score", 0) or 0)
-    direct = bool(theme.get("tiene_ole"))
-    new_details = _new_detail_tokens(source_titles or [representative], str(match.get("title") or ""))
+    direct = _direct_ole_evidence(theme)
+    valid = bool(match.get("valid")) or direct
+    new_details = _new_detail_tokens(source_titles or [representative], str(match.get("title") or "")) if valid else []
 
-    if (direct or score >= 0.68) and new_details:
+    if direct and not match.get("title"):
+        # El cluster contiene una nota de Olé pero el inventario cronológico pudo
+        # no traerla todavía. Se reconoce la cobertura sin inventar un enlace.
+        status = "CUBIERTO_CON_DATO_NUEVO" if new_details else "YA_CUBIERTO"
+    elif valid and score >= 0.72 and new_details:
         status = "CUBIERTO_CON_DATO_NUEVO"
-    elif direct or score >= 0.68:
+    elif valid and score >= 0.72:
         status = "YA_CUBIERTO"
-    elif score >= 0.48:
+    elif valid and score >= 0.55:
         status = "CUBIERTO_CON_DATO_NUEVO" if new_details else "CUBIERTO_PARCIALMENTE"
-    elif score >= 0.30:
+    elif valid and score >= 0.38:
         status = "COINCIDENCIA_DUDOSA"
     else:
         status = "NO_CUBIERTO"
@@ -121,8 +252,10 @@ def enrich_theme_coverage(theme: dict, ole_items: list[dict]) -> dict:
     enriched.update({
         "coverage_status": status,
         "ole_match_score": round(score, 3),
-        "ole_match_title": match.get("title", ""),
-        "ole_match_url": match.get("url", ""),
+        "ole_match_title": match.get("title", "") if valid else "",
+        "ole_match_url": match.get("url", "") if valid else "",
+        "ole_match_entities": match.get("shared_entities", []) if valid else [],
+        "ole_match_events": match.get("shared_events", []) if valid else [],
         "new_detail_tokens": new_details,
         "tiene_ole": status in {"YA_CUBIERTO", "CUBIERTO_PARCIALMENTE", "CUBIERTO_CON_DATO_NUEVO"},
     })

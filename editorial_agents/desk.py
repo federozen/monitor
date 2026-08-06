@@ -88,10 +88,12 @@ def _evidence_from_theme(row: dict) -> list[dict]:
             "publisher": str(news.get("publisher_original") or news.get("fuente") or source.get("nombre") or "Fuente"),
             "title": str(news.get("titulo") or news.get("title") or ""),
             "url": str(news.get("url") or ""),
-            "published_at": str(news.get("fecha_publicacion") or news.get("fecha") or ""),
+            "published_at": str(news.get("fecha_publicacion_verificada") or news.get("fecha_publicacion") or news.get("fecha") or ""),
+            "updated_at": str(news.get("fecha_actualizacion") or news.get("updated_at") or ""),
             "source_id": source_id,
             "discovery_channel": discovery_channel,
             "date_trust": date_trust,
+            "date_origin": str(news.get("date_origin") or ""),
         })
     return out
 
@@ -102,16 +104,18 @@ def _activity_dates(row: dict, trusted_only: bool = False) -> list[datetime]:
     dates: list[datetime] = []
     for item in _evidence_from_theme(row):
         trust = str(item.get("date_trust") or "").lower()
-        if trusted_only and trust in {"discovery_timestamp", "missing", "unverified"}:
+        if trusted_only and trust in {"discovery_timestamp", "missing", "unverified", "publisher_date_only"}:
             continue
-        dt = parse_datetime(item.get("published_at"))
-        if dt:
-            dates.append(dt)
+        for key in ("updated_at", "published_at"):
+            dt = parse_datetime(item.get(key))
+            if dt:
+                dates.append(dt)
+                break
     # Fechas a nivel de tema son confiables solo si fueron calculadas por el
     # publisher o por metadata de artículo. Un timestamp agregado por Google
     # News no debe ascender aquí como fecha editorial.
     row_trust = str(row.get("date_trust") or row.get("DateTrust") or "").lower()
-    if not trusted_only or row_trust not in {"discovery_timestamp", "missing", "unverified"}:
+    if not trusted_only or row_trust not in {"discovery_timestamp", "missing", "unverified", "publisher_date_only"}:
         for key in ("published_at", "FechaPublicacion", "fecha_publicacion", "updated_at", "FechaActualizacion"):
             dt = parse_datetime(row.get(key))
             if dt:
@@ -153,7 +157,7 @@ def _discovery_in_cut(discovery: dict, start: datetime, now: datetime) -> bool:
     if explicit is not None and explicit.date() < start.date():
         return False
     trust = str(discovery.get("date_trust") or discovery.get("DateTrust") or "publisher_timestamp").lower()
-    if trust in {"discovery_timestamp", "missing", "unverified"}:
+    if trust in {"discovery_timestamp", "missing", "unverified", "publisher_date_only"}:
         return False
     dt = parse_datetime(discovery.get("published_at") or discovery.get("FechaPublicacion"))
     return bool(dt and start <= dt <= now + timedelta(minutes=10))

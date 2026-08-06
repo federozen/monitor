@@ -1,3 +1,16 @@
+## 12.1.2 - 2026-08-05
+
+- Agrega enriquecimiento acotado de fechas: abre solamente artículos directos priorizados y extrae `datePublished` / `dateModified` desde JSON-LD, metadatos y etiquetas `time`.
+- Mantiene las horas de Google News como descubrimiento no verificable; nunca las usa para certificar actualidad.
+- Reconoce formatos RFC-822, ISO, fechas numéricas y fechas en español con hora.
+- Las fechas de día sin hora quedan como `publisher_date_only` y no ingresan artificialmente al Resumen 4H.
+- Endurece la comparación con Olé: compartir un solo club o protagonista ya no alcanza para declarar cobertura.
+- Exige coincidencia de entidades, hecho editorial y/o vocabulario distintivo antes de vincular una nota de Olé.
+- Elimina de la salida visible los enlaces de Olé cuando la coincidencia no supera la validación.
+- Separa mejor hallazgos firmes de candidatos: nombres globales o conexión argentina sin una señal editorial central ya no bastan.
+- Amplía la trazabilidad técnica de Noticias y Temas con URL final, fecha publicada, fecha actualizada, confianza y origen.
+- Agrega ocho pruebas de regresión específicas; la suite completa alcanza 67 pruebas.
+
 ## 12.1.1 - 2026-08-05
 
 - Unifica el identificador de historia entre Temas, Recomendaciones, Cambios y la mesa editorial.

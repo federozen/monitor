@@ -22,6 +22,7 @@ import sheets_memoria as mem
 import online_storage as online
 from editorial_agents import orchestrator as agent_orchestrator
 from editorial_agents import cut_quality
+from editorial_agents.date_enrichment import enrich_results_dates
 
 
 def clave_tema(titulo: str) -> str:
@@ -183,6 +184,17 @@ def main():
         print("   Muy pocas fuentes respondieron; aborto para no ensuciar la memoria.")
         sys.exit(1)
 
+    print("\n1b) Verificando fechas en artículos prioritarios...")
+    date_stats = enrich_results_dates(resultados, TODAS_FUENTES)
+    print(
+        "   fechas: "
+        f"{date_stats.get('confirmed', 0)} publicaciones confirmadas · "
+        f"{date_stats.get('updated', 0)} actualizaciones · "
+        f"{date_stats.get('normalized', 0)} fechas normalizadas · "
+        f"{date_stats.get('requested', 0)} notas consultadas · "
+        f"{date_stats.get('failed', 0)} sin metadata"
+    )
+
     print("\n2) Tendencias y momentum...")
     tendencias = calcular_tendencias(resultados)
     if cfg.get("ignorar"):
@@ -340,6 +352,10 @@ def main():
                     "ole_ultima_nota_hoy": ole_fetch_meta.get("latest_today", ""),
                     "ole_detalle_fecha_consultas": ole_fetch_meta.get("detail_requests", 0),
                     "ole_fin_recorrido": ole_fetch_meta.get("stop_reason", ""),
+                    "fechas_articulo_confirmadas": date_stats.get("confirmed", 0),
+                    "fechas_actualizacion_confirmadas": date_stats.get("updated", 0),
+                    "fechas_notas_consultadas": date_stats.get("requested", 0),
+                    "fechas_sin_metadata": date_stats.get("failed", 0),
                 },
                 preserve_previous=quality.get("preserve_previous", False),
                 quality_info=quality,

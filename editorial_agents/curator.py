@@ -27,12 +27,28 @@ def _source_details(theme: dict) -> list[dict]:
     for item in theme.get("noticias", []) or []:
         news = item.get("noticia", {}) or {}
         source = item.get("fuente", {}) or {}
+        published_at = news.get("fecha_publicacion_verificada") or news.get("fecha_publicacion") or ""
+        discovery_channel = str(news.get("discovery_channel") or "")
+        source_url = str(source.get("url") or "")
+        source_id = str(news.get("source_id") or source.get("id") or "")
+        trust = str(news.get("date_trust") or "")
+        if not trust:
+            is_gnews = (
+                discovery_channel.lower() == "google news"
+                or "news.google.com" in source_url
+                or source_id.startswith("gn_")
+            )
+            trust = "discovery_timestamp" if is_gnews and published_at else (
+                "publisher_timestamp" if published_at else "missing"
+            )
         details.append({
             "publisher": news.get("publisher_original") or source.get("nombre") or source.get("id") or "Fuente",
             "configured_source": source.get("nombre") or source.get("id") or "",
             "title": news.get("titulo") or "",
-            "url": news.get("url") or "",
-            "published_at": news.get("fecha_publicacion") or "",
+            "url": news.get("url_final") or news.get("url") or "",
+            "published_at": published_at,
+            "updated_at": news.get("fecha_actualizacion") or "",
+            "date_trust": trust,
         })
     return details
 
@@ -64,7 +80,16 @@ def _parse_date(value: str) -> datetime | None:
 
 
 def _freshness(details: list[dict], max_age_hours: int) -> dict:
-    dates = [dt for dt in (_parse_date(d.get("published_at", "")) for d in details) if dt]
+    untrusted = {"discovery_timestamp", "missing", "unverified", "publisher_date_only"}
+    dates: list[datetime] = []
+    for detail in details:
+        if str(detail.get("date_trust") or "missing").lower() in untrusted:
+            continue
+        for key in ("updated_at", "published_at"):
+            parsed = _parse_date(detail.get(key, ""))
+            if parsed:
+                dates.append(parsed)
+                break
     if not dates:
         return {"has_dates": False, "is_recent": False, "latest": "", "age_hours": None, "dated_count": 0}
     latest = max(dates)

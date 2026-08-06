@@ -26,6 +26,7 @@ UNTRUSTED_DATE_TYPES = {
     "missing",
     "unverified",
     "unverified_stale_risk",
+    "publisher_date_only",
 }
 
 FRESH_HOOK_PATTERNS = (

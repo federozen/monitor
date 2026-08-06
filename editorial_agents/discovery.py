@@ -4,7 +4,7 @@ import os
 from datetime import datetime, timezone
 
 from .coverage import best_ole_match, normalize_ole_items
-from .utils import clamp, normalize_text, stable_id, unique_strings
+from .utils import clamp, normalize_text, parse_datetime, stable_id, unique_strings
 
 RARE_HINTS = {
     "insolito", "insolita", "bizarre", "weird", "strange", "unusual", "curious",
@@ -67,16 +67,8 @@ QUALITY_SOURCE_IDS = {
 
 
 def _parse_date(value: str) -> datetime | None:
-    raw = str(value or "").strip()
-    if not raw:
-        return None
-    try:
-        dt = datetime.fromisoformat(raw.replace("Z", "+00:00"))
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
-        return dt.astimezone(timezone.utc)
-    except Exception:
-        return None
+    parsed = parse_datetime(value)
+    return parsed.astimezone(timezone.utc) if parsed else None
 
 
 def _jaccard(a: str, b: str) -> float:
@@ -160,7 +152,7 @@ def _editorial_score(title: str, media_count: int, age_hours: float | None,
 
 
 def _confidence(source_ids: list[str], publishers: list[str], date_trust: str) -> tuple[int, str]:
-    direct = str(date_trust or "").lower() not in {"discovery_timestamp", "missing", "unverified"}
+    direct = str(date_trust or "").lower() not in {"discovery_timestamp", "missing", "unverified", "publisher_date_only"}
     quality_count = sum(1 for source_id in source_ids if source_id in QUALITY_SOURCE_IDS)
     score = 34 + (24 if direct else -20)
     score += min(24, max(0, len(publishers) - 1) * 8)
@@ -175,10 +167,19 @@ def _confidence(source_ids: list[str], publishers: list[str], date_trust: str) -
     return score, "; ".join(reasons)
 
 
-def _status(score: int, confidence: int, signal_count: int, strong_threshold: int) -> str:
-    if score >= strong_threshold and confidence >= 60 and signal_count >= 3:
+def _status(score: int, confidence: int, signals: list[str], strong_threshold: int,
+            media_count: int, quality_count: int) -> str:
+    core_signals = {
+        "RAREZA", "VISUAL", "DATO O RECORD", "HISTORIA HUMANA",
+        "NEGOCIO O TECNOLOGIA", "CONSECUENCIA DEPORTIVA",
+    }
+    has_core = bool(core_signals & set(signals))
+    corroborated = media_count >= 2 or quality_count >= 1
+    if (score >= strong_threshold and confidence >= 68 and len(signals) >= 3
+            and has_core and corroborated):
         return "HALLAZGO FUERTE"
-    if score >= max(46, strong_threshold - 16) and confidence >= 50 and signal_count >= 2:
+    if (score >= max(58, strong_threshold - 4) and confidence >= 62
+            and len(signals) >= 2 and has_core and corroborated):
         return "HALLAZGO"
     return "CANDIDATO PARA EXPLORAR"
 
@@ -203,16 +204,18 @@ def _collect(results: dict, source_map: dict, max_age_hours: int) -> list[dict]:
             title = str(news.get("titulo") or "").strip()
             if len(title) < 18:
                 continue
-            published = _parse_date(news.get("fecha_publicacion", ""))
+            published = _parse_date(news.get("fecha_publicacion_verificada") or news.get("fecha_publicacion", ""))
+            updated = _parse_date(news.get("fecha_actualizacion", ""))
+            activity = max([value for value in (published, updated) if value], default=None)
             source_url = str(source.get("url") or "")
             channel = str(news.get("discovery_channel") or "")
             trust = str(news.get("date_trust") or "")
             if not trust:
                 is_gnews = channel.lower() == "google news" or "news.google.com" in source_url or source_id.startswith("gn_")
                 trust = "discovery_timestamp" if is_gnews else "publisher_timestamp"
-            if published is None or trust in {"discovery_timestamp", "missing", "unverified"}:
+            if activity is None or trust in {"discovery_timestamp", "missing", "unverified", "publisher_date_only"}:
                 continue
-            age = max(0.0, (now - published).total_seconds() / 3600)
+            age = max(0.0, (now - activity).total_seconds() / 3600)
             if age > max_age_hours:
                 continue
             items.append({
@@ -221,7 +224,8 @@ def _collect(results: dict, source_map: dict, max_age_hours: int) -> list[dict]:
                 "publisher": news.get("publisher_original") or source.get("nombre", source_id),
                 "title": title,
                 "url": news.get("url", ""),
-                "published_at": news.get("fecha_publicacion", ""),
+                "published_at": (news.get("fecha_actualizacion") or news.get("fecha_publicacion_verificada")
+                                 or news.get("fecha_publicacion", "")),
                 "age_hours": age,
                 "date_trust": trust,
             })
@@ -270,6 +274,7 @@ def generate(results: dict, ole_items: list[dict] | None, previous: list[dict] |
             representative["title"], len(publishers), representative.get("age_hours"), float(match.get("score", 0) or 0)
         )
         confidence, confidence_reason = _confidence(source_ids, publishers, representative.get("date_trust", ""))
+        quality_count = sum(1 for source_id in source_ids if source_id in QUALITY_SOURCE_IDS)
         discovery_id = stable_id(normalize_text(representative["title"]), "d")
         previous_item = prev_by_id.get(discovery_id)
         is_new = previous_item is None
@@ -280,12 +285,12 @@ def generate(results: dict, ole_items: list[dict] | None, previous: list[dict] |
         grew = bool(previous_item) and len(publishers) > previous_media
         if previous_item and not grew:
             score = max(0, score - 8)
-        status = _status(score, confidence, len(signals), strong_threshold)
+        status = _status(score, confidence, signals, strong_threshold, len(publishers), quality_count)
 
         editorial_reasons = [signal.lower() for signal in signals]
-        if float(match.get("score", 0) or 0) < 0.30:
+        if not match.get("valid") or float(match.get("score", 0) or 0) < 0.38:
             editorial_reasons.append("no se encontró una pieza equivalente en Olé")
-        elif float(match.get("score", 0) or 0) < 0.68:
+        elif float(match.get("score", 0) or 0) < 0.72:
             editorial_reasons.append("la coincidencia con Olé es parcial")
         if representative.get("age_hours") is not None:
             editorial_reasons.append(f"publicada hace {representative['age_hours']:.1f} horas")
@@ -315,7 +320,7 @@ def generate(results: dict, ole_items: list[dict] | None, previous: list[dict] |
             "date_trust": representative.get("date_trust", "publisher_timestamp"),
             "is_new": is_new,
             "grew": grew,
-            "ole_status": "NO_CUBIERTO" if float(match.get("score", 0) or 0) < 0.30 else "COINCIDENCIA_DUDOSA",
+            "ole_status": "NO_CUBIERTO" if (not match.get("valid") or float(match.get("score", 0) or 0) < 0.38) else "COINCIDENCIA_DUDOSA",
             "ole_match_title": match.get("title", ""),
             "ole_match_url": match.get("url", ""),
             "reason": ". ".join(unique_strings(editorial_reasons)),

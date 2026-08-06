@@ -6,6 +6,7 @@ import os
 import re
 import unicodedata
 from datetime import datetime, timedelta
+from email.utils import parsedate_to_datetime
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -89,18 +90,143 @@ _MONTHS_ES = {
 }
 
 
+_MONTH_ALIASES = {
+    # español
+    "enero": 1, "ene": 1, "febrero": 2, "feb": 2, "marzo": 3, "mar": 3,
+    "abril": 4, "abr": 4, "mayo": 5, "may": 5, "junio": 6, "jun": 6,
+    "julio": 7, "jul": 7, "agosto": 8, "ago": 8, "septiembre": 9,
+    "setiembre": 9, "sep": 9, "sept": 9, "octubre": 10, "oct": 10,
+    "noviembre": 11, "nov": 11, "diciembre": 12, "dic": 12,
+    # inglés / portugués / italiano / francés, frecuentes en las fuentes
+    "january": 1, "jan": 1, "janeiro": 1, "gennaio": 1, "janvier": 1,
+    "february": 2, "fevereiro": 2, "febbraio": 2, "fevrier": 2, "février": 2,
+    "march": 3, "marco": 3, "março": 3, "marzo": 3, "mars": 3,
+    "april": 4, "abril": 4, "aprile": 4, "avril": 4,
+    "may": 5, "maio": 5, "maggio": 5, "mai": 5,
+    "june": 6, "junho": 6, "giugno": 6, "juin": 6,
+    "july": 7, "julho": 7, "luglio": 7, "juillet": 7,
+    "august": 8, "agosto": 8, "aout": 8, "août": 8,
+    "september": 9, "setembro": 9, "settembre": 9, "septembre": 9,
+    "october": 10, "outubro": 10, "ottobre": 10, "octobre": 10,
+    "november": 11, "novembro": 11, "novembre": 11,
+    "december": 12, "dezembro": 12, "dicembre": 12, "decembre": 12, "décembre": 12,
+}
+
+
+def _normalize_date_text(raw: str) -> str:
+    text = unicodedata.normalize("NFD", raw.lower())
+    text = "".join(ch for ch in text if unicodedata.category(ch) != "Mn")
+    text = text.replace("hs.", "").replace("hs", "").replace("h.", ":00")
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def _build_datetime(year: int, month: int, day: int, hour: int, minute: int,
+                    second: int, assume_tz) -> datetime | None:
+    try:
+        return datetime(year, month, day, hour, minute, second, tzinfo=assume_tz).astimezone(TZ_AR)
+    except (TypeError, ValueError):
+        return None
+
+
 def parse_datetime(value: Any, assume_tz=TZ_AR) -> datetime | None:
-    """Parsea fechas ISO y las normaliza a America/Argentina/Buenos_Aires."""
-    raw = str(value or "").strip()
+    """Parsea fechas editoriales comunes y las normaliza a Buenos Aires.
+
+    Además de ISO admite RFC-822, timestamps Unix, fechas numéricas
+    ``dd/mm/yyyy`` y expresiones como ``5 de agosto de 2026, 21:44``. No
+    interpreta frases relativas (``hace dos horas``), porque no son una fecha
+    auditable y podrían convertir una portada vieja en actualidad.
+    """
+    if value is None or value == "":
+        return None
+    if isinstance(value, datetime):
+        dt = value
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=assume_tz)
+        return dt.astimezone(TZ_AR)
+
+    if isinstance(value, (int, float)):
+        try:
+            seconds = float(value) / (1000 if abs(float(value)) > 10_000_000_000 else 1)
+            return datetime.fromtimestamp(seconds, tz=TZ_AR)
+        except (OverflowError, OSError, TypeError, ValueError):
+            return None
+
+    raw = str(value).strip()
     if not raw:
         return None
+
+    # Unix timestamp serializado como texto.
+    if re.fullmatch(r"\d{10}(?:\.\d+)?|\d{13}", raw):
+        try:
+            number = float(raw)
+            seconds = number / (1000 if len(raw.split(".", 1)[0]) == 13 else 1)
+            return datetime.fromtimestamp(seconds, tz=TZ_AR)
+        except (OverflowError, OSError, ValueError):
+            pass
+
+    # ISO-8601, incluida la forma con espacio entre fecha y hora.
+    iso = raw.replace("Z", "+00:00")
     try:
-        dt = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+        dt = datetime.fromisoformat(iso)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=assume_tz)
+        return dt.astimezone(TZ_AR)
     except Exception:
-        return None
-    if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=assume_tz)
-    return dt.astimezone(TZ_AR)
+        pass
+
+    # RSS/RFC-822.
+    try:
+        dt = parsedate_to_datetime(raw)
+        if dt:
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=assume_tz)
+            return dt.astimezone(TZ_AR)
+    except Exception:
+        pass
+
+    text = _normalize_date_text(raw)
+    if any(marker in text for marker in ("hace ", "ago", "minuto", "minute", "hour ago")):
+        # ``ago`` es ambiguo con agosto. Solo se rechaza cuando no aparece una
+        # fecha numérica o un año que permita auditarla.
+        if not re.search(r"\b(?:19|20)\d{2}\b|\b\d{1,2}[/-]\d{1,2}", text):
+            return None
+
+    # 5 de agosto de 2026, 21:44 / 5 August 2026 21:44.
+    month_names = "|".join(sorted((re.escape(name) for name in _MONTH_ALIASES), key=len, reverse=True))
+    patterns = (
+        rf"\b(\d{{1,2}})\s+(?:de\s+)?({month_names})(?:\s+de)?\s+(\d{{4}})(?:[^0-9]+(\d{{1,2}})[:.]?(\d{{2}})?(?::(\d{{2}}))?)?",
+        rf"\b({month_names})\s+(\d{{1,2}})(?:,)?\s+(\d{{4}})(?:[^0-9]+(\d{{1,2}})[:.]?(\d{{2}})?(?::(\d{{2}}))?)?",
+    )
+    match = re.search(patterns[0], text)
+    if match:
+        day, month_name, year = int(match.group(1)), match.group(2), int(match.group(3))
+        hour = int(match.group(4) or 12)
+        minute = int(match.group(5) or 0)
+        second = int(match.group(6) or 0)
+        return _build_datetime(year, _MONTH_ALIASES[month_name], day, hour, minute, second, assume_tz)
+    match = re.search(patterns[1], text)
+    if match:
+        month_name, day, year = match.group(1), int(match.group(2)), int(match.group(3))
+        hour = int(match.group(4) or 12)
+        minute = int(match.group(5) or 0)
+        second = int(match.group(6) or 0)
+        return _build_datetime(year, _MONTH_ALIASES[month_name], day, hour, minute, second, assume_tz)
+
+    # dd/mm/yyyy o dd-mm-yyyy, con hora opcional. Se prioriza el orden usado
+    # por los publishers de Argentina, España, Italia, Francia y Brasil.
+    match = re.search(
+        r"\b(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})(?:[ t,]+(\d{1,2})(?::(\d{2}))?(?::(\d{2}))?)?\b",
+        text,
+    )
+    if match:
+        day, month, year = int(match.group(1)), int(match.group(2)), int(match.group(3))
+        if year < 100:
+            year += 2000
+        return _build_datetime(
+            year, month, day, int(match.group(4) or 12), int(match.group(5) or 0),
+            int(match.group(6) or 0), assume_tz,
+        )
+    return None
 
 
 def explicit_date_in_text(text: str, now: datetime | None = None) -> datetime | None:

@@ -26,7 +26,8 @@ _CACHE = {"sheet": None, "worksheets": None, "records": {}}
 
 NOTICIAS_HEADERS = [
     "RunTS", "NoticiaID", "FuenteID", "FuenteConfigurada", "PublisherOriginal",
-    "CanalDescubrimiento", "Titulo", "URL", "Imagen", "FechaPublicacion", "Zona",
+    "CanalDescubrimiento", "Titulo", "URL", "URLFinal", "Imagen",
+    "FechaPublicacion", "FechaActualizacion", "TipoFecha", "OrigenFecha", "Zona",
 ]
 TEMAS_HEADERS = [
     "RunTS", "ClusterID", "Prioridad", "Accion", "Titulo", "URL", "Medios",
@@ -376,9 +377,12 @@ def guardar_snapshot_online(resultados: dict, tendencias: list, agenda: list,
             )
             nid = _stable_id(f"{n.get('url','')}|{n.get('titulo','')}|{fid}", "n")
             news_rows.append([
-                now, nid, fid, fuente.get("nombre", fid), publisher, canal,
-                n.get("titulo", ""), n.get("url", ""), n.get("imagen", ""),
-                n.get("fecha_publicacion", ""), "Nacional" if fid in nac_ids else "Internacional",
+                now, nid, fid, fuente.get("nombre", fid), publisher,
+                n.get("discovery_channel") or canal, n.get("titulo", ""), n.get("url", ""),
+                n.get("url_final", ""), n.get("imagen", ""),
+                n.get("fecha_publicacion_verificada") or n.get("fecha_publicacion", ""),
+                n.get("fecha_actualizacion", ""), n.get("date_trust", ""),
+                n.get("date_origin", ""), "Nacional" if fid in nac_ids else "Internacional",
             ])
     news_rows = news_rows[:max_news]
 
@@ -392,9 +396,14 @@ def guardar_snapshot_online(resultados: dict, tendencias: list, agenda: list,
             detalles.append({
                 "fuente": n.get("publisher_original") or f.get("nombre", ""),
                 "canal": f.get("nombre", ""),
+                "source_id": n.get("source_id") or f.get("id", ""),
+                "discovery_channel": n.get("discovery_channel", ""),
                 "titulo": n.get("titulo", ""),
-                "url": n.get("url", ""),
-                "fecha": n.get("fecha_publicacion", ""),
+                "url": n.get("url_final") or n.get("url", ""),
+                "fecha": n.get("fecha_publicacion_verificada") or n.get("fecha_publicacion", ""),
+                "fecha_actualizacion": n.get("fecha_actualizacion", ""),
+                "date_trust": n.get("date_trust", ""),
+                "date_origin": n.get("date_origin", ""),
             })
         temas_rows.append([
             now, cid, pos, action.get("accion", "OBSERVAR"), c.get("titulo", ""),
