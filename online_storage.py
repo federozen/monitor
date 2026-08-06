@@ -932,6 +932,48 @@ def actualizar_accion_editor(action_id: str, status: str, notes: str = "") -> bo
     return changed
 
 
+def _actualizar_control_ole_final(ole_entries: list[dict]) -> None:
+    """Sincroniza Control con la vista final de OLE_HOY.
+
+    El recolector de /ultimas-noticias produce métricas antes de que se sumen
+    portada y notas directas detectadas por el monitor. Por eso Control podía
+    informar como última publicación las 16:45 aunque OLE_HOY ya tuviera notas
+    de las 20:52. Esta función usa la misma lista final que se escribe en la
+    hoja editorial.
+    """
+    if not ole_entries:
+        return
+    try:
+        def parse_dt(value: Any):
+            raw = str(value or "").strip()
+            if not raw:
+                return None
+            try:
+                return datetime.fromisoformat(raw.replace("Z", "+00:00"))
+            except Exception:
+                return None
+
+        published = [parse_dt(row.get("published_at")) for row in ole_entries]
+        updated = [parse_dt(row.get("updated_at")) for row in ole_entries]
+        published = [dt for dt in published if dt is not None]
+        updated = [dt for dt in updated if dt is not None]
+        now = datetime.now(_TZ_AR).isoformat(timespec="seconds")
+        control = leer_control()
+        control.update({
+            "ole_notas_fechadas": len(ole_entries),
+            "ole_notas_hoy_fechadas": len(ole_entries),
+            "ole_primera_nota_hoy": min(published).isoformat(timespec="minutes") if published else "",
+            "ole_ultima_nota_hoy": max(published).isoformat(timespec="minutes") if published else "",
+            "ole_ultima_actualizacion_hoy": max(updated).isoformat(timespec="minutes") if updated else "",
+            "ole_registros_finales": len(ole_entries),
+        })
+        _replace("Control", CONTROL_HEADERS, [[k, v, now] for k, v in control.items()], max(50, len(control) + 10))
+    except Exception:
+        # La sincronización es observabilidad adicional: no debe borrar ni
+        # bloquear las salidas editoriales si Google Sheets falla aquí.
+        return
+
+
 def guardar_mesa_editorial(desk: dict, ole_entries: list[dict], ole_coverage: list[dict],
                             source_rows: list[dict]) -> dict:
     """Persiste la mesa editorial mediante escrituras por lote.
@@ -965,33 +1007,74 @@ def guardar_mesa_editorial(desk: dict, ole_entries: list[dict], ole_coverage: li
     ] for item in topics]
 
     previous_rows = leer_acciones_editor()
-    previous_actions = {row.get("ActionID", ""): row for row in previous_rows if row.get("ActionID")}
     terminal = {"HECHO", "DESCARTADO"}
+
+    # La hoja ACCIONES es operativa, no un log de cada recalculo. Durante un
+    # mismo corte el texto de "dato nuevo" puede mejorar (por ejemplo, aparece
+    # una fuente oficial) y con ello cambia el ActionID. Antes se conservaban
+    # todas las versiones pendientes y una historia terminaba repetida dos o
+    # tres veces. Se toma como reemplazable la acción abierta del mismo tema y
+    # corte; las acciones de cortes anteriores y las resueltas sí se conservan.
+    previous_actions = {row.get("ActionID", ""): row for row in previous_rows if row.get("ActionID")}
+    previous_open_by_topic_cut: dict[tuple[str, str], dict] = {}
+    for row in previous_rows:
+        key = (str(row.get("Corte") or ""), str(row.get("TemaID") or ""))
+        status = str(row.get("Estado") or "").upper()
+        if not all(key) or status in terminal:
+            continue
+        current = previous_open_by_topic_cut.get(key)
+        if current is None or str(row.get("Actualizado") or "") >= str(current.get("Actualizado") or ""):
+            previous_open_by_topic_cut[key] = row
+
     action_rows = []
-    current_ids = set()
+    current_ids: set[str] = set()
+    current_topic_cuts: set[tuple[str, str]] = set()
     for item in actions:
-        action_id = item.get("action_id", "")
+        action_id = str(item.get("action_id") or "")
+        item_cut = str(item.get("cut_key") or cut_key)
+        topic_id = str(item.get("topic_id") or "")
+        topic_cut = (item_cut, topic_id)
         current_ids.add(action_id)
+        current_topic_cuts.add(topic_cut)
+
         old = previous_actions.get(action_id, {})
+        if not old:
+            old = previous_open_by_topic_cut.get(topic_cut, {})
         old_status = str(old.get("Estado") or "").upper()
-        if old_status in terminal:
-            # El mismo dato ya fue resuelto. Se conserva como historial y no se
-            # vuelve a presentar como pendiente. Solo un cambio real genera otro ID.
+        if old_status in terminal and str(old.get("ActionID") or "") == action_id:
+            # El mismo hecho ya fue resuelto. Solo un cambio editorial real,
+            # representado por un ActionID nuevo, puede abrir otra acción.
             action_rows.append([old.get(h, "") for h in ACCIONES_EDITOR_HEADERS])
             continue
         action_rows.append([
-            action_id, item.get("cut_key", cut_key), item.get("priority", 0),
+            action_id, item_cut, item.get("priority", 0),
             item.get("action", ""), old.get("Estado") or item.get("status", "PENDIENTE"),
-            item.get("topic_id", ""), item.get("topic", ""), item.get("new_data", ""),
+            topic_id, item.get("topic", ""), item.get("new_data", ""),
             item.get("ole_title", ""), item.get("ole_url", ""), item.get("sources", ""),
             item.get("source_urls", ""), item.get("updated_at", ""), old.get("Notas") or item.get("notes", ""),
         ])
-    # Mantiene seguimientos abiertos que podrían no figurar en el corte siguiente.
+
+    # Conserva seguimientos de cortes anteriores y acciones resueltas. Descarta
+    # versiones abiertas obsoletas del corte actual cuando el mismo tema ya fue
+    # recalculado o dejó de ser accionable.
+    preserved_keys: set[tuple[str, str, str]] = set()
     for row in previous_rows:
-        action_id = row.get("ActionID", "")
+        action_id = str(row.get("ActionID") or "")
+        row_cut = str(row.get("Corte") or "")
+        topic_id = str(row.get("TemaID") or "")
         status = str(row.get("Estado") or "").upper()
-        if action_id and action_id not in current_ids:
-            action_rows.append([row.get(h, "") for h in ACCIONES_EDITOR_HEADERS])
+        topic_cut = (row_cut, topic_id)
+        if not action_id or action_id in current_ids:
+            continue
+        if row_cut == cut_key and status not in terminal:
+            # Toda acción abierta del corte vigente debe estar respaldada por la
+            # salida actual; si no, es una versión vieja del mismo cálculo.
+            continue
+        dedupe_key = (row_cut, topic_id, status or action_id)
+        if dedupe_key in preserved_keys:
+            continue
+        preserved_keys.add(dedupe_key)
+        action_rows.append([row.get(h, "") for h in ACCIONES_EDITOR_HEADERS])
     action_rows = action_rows[:500]
 
     ole_rows = [[
@@ -1045,6 +1128,7 @@ def guardar_mesa_editorial(desk: dict, ole_entries: list[dict], ole_coverage: li
         "source_editor": _replace("FUENTES_EDITOR", FUENTES_EDITOR_HEADERS, source_values, 200),
         "audit": _replace("AUDITORIA", AUDITORIA_HEADERS, audit_rows, 1500),
     }
+    _actualizar_control_ole_final(ole_entries or [])
     _format_editorial_sheet("RESUMEN_4H", [110, 125, 125, 65, 115, 145, 300, 420, 360, 360, 155, 260, 230, 125, 80, 75, 240, 240, 230, 145], {"red": 0.07, "green": 0.35, "blue": 0.65})
     _format_editorial_sheet("ACCIONES", [160, 110, 80, 120, 110, 140, 320, 380, 260, 230, 220, 220, 150, 260], {"red": 0.78, "green": 0.25, "blue": 0.12})
     _format_editorial_sheet("OLE_HOY", [150,145,145,125,135,115,80,145,145,130,140,300,130,360,240,180,360,180], {"red": 0.1, "green": 0.55, "blue": 0.22})

@@ -1,3 +1,15 @@
+# Changelog
+
+## 12.1.5
+
+- Limpia `ACCIONES`: reemplaza versiones pendientes obsoletas de una misma historia dentro del corte vigente.
+- Conserva seguimientos de cortes anteriores y decisiones editoriales terminales.
+- Elimina falsos cambios basados en números aislados como “dato numérico 7”.
+- Distingue la jornada del torneo de un cambio real de fecha, sede u horario.
+- Sincroniza `Control` con la lista final escrita en `OLE_HOY`.
+- Agrega la última actualización de Olé y el número final de registros visibles.
+- Suma cuatro pruebas de regresión; total: 81 pruebas aprobadas.
+
 ## 12.1.4 - 2026-08-05
 
 - Agrega una segunda pasada de consolidación para convertir clusters técnicos duplicados en historias vivas.

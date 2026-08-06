@@ -120,7 +120,10 @@ _FACT_GROUPS = {
     "PARTE_MEDICO": {"lesion", "lesionado", "baja", "diagnostico", "operado", "cirugia", "recuperacion"},
     "PLAZO": {"dias", "semanas", "meses", "plazo"},
     "CIFRA": {"millones", "euros", "dolares", "monto", "cifra", "salario", "clausula"},
-    "PROGRAMACION": {"fecha", "horario", "hora", "sede", "estadio", "postergado", "suspendido"},
+    # "fecha" sola suele referirse a la jornada del torneo (fecha 4, fecha 7)
+    # y no a un cambio de programación. Se detecta por expresiones más precisas
+    # dentro de _fact_markers().
+    "PROGRAMACION": {"horario", "sede", "estadio", "postergado", "suspendido", "reprogramado"},
     "FORMACION": {"titular", "suplente", "convocados", "formacion", "once", "lista"},
     "SANCION": {"sancion", "suspendido", "expulsado", "inhabilitado", "fallo"},
     "RESULTADO": {"gano", "perdio", "empato", "vencio", "resultado", "clasifico", "eliminado", "campeon", "gol"},
@@ -136,20 +139,19 @@ def _fact_markers(titles: list[str]) -> set[str]:
         for group, terms in _FACT_GROUPS.items():
             if words & terms:
                 markers.add(group)
-        # Los números aislados de un marcador (0, 1, 2) o el año de la
-        # competencia no constituyen por sí mismos un cambio editorial. Los
-        # grupos RESULTADO, CIFRA y PLAZO ya capturan el sentido relevante.
-        for match in re.findall(r"\b\d+(?:[.,]\d+)?\b", text):
-            normalized_number = match.replace(',', '.')
-            try:
-                numeric = float(normalized_number)
-            except ValueError:
-                continue
-            if numeric <= 2 or 1900 <= numeric <= 2100:
-                continue
-            markers.add(f"NUMERO:{normalized_number}")
+        # No se generan marcadores por números aislados. Un "7" puede ser la
+        # fecha del torneo, una camiseta o una posición; sin contexto produce
+        # falsos cambios. Los grupos RESULTADO, CIFRA, PLAZO y las expresiones
+        # de horario capturan los números que sí tienen sentido editorial.
         for hh, mm in re.findall(r"\b([0-2]?\d)[:.]([0-5]\d)\b", text):
             markers.add(f"HORA:{int(hh):02d}:{mm}")
+        if re.search(
+            r"\b(?:se\s+(?:juega|jugara|disputa|disputara)|programad[oa]|"
+            r"reprogramad[oa]|cambio\s+de\s+(?:fecha|sede|horario)|"
+            r"fecha\s+confirmada|nuevo\s+horario)\b",
+            text,
+        ):
+            markers.add("PROGRAMACION")
     return markers
 
 
